@@ -1,1 +1,27 @@
-PLaceholder
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capital Ship</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="intro" id="intro-screen">
+    <div class="intro__content">
+      <h1 class="intro__title">Capital ship</h1>
+      <p class="intro__copy">Choose your vessel, then launch into the black to face the unknown.</p>
+      <p class="intro__hint">Move with W A S D and aim/fire with the mouse.</p>
+      <div class="ship-picker ship-picker--intro" id="intro-ship-picker" aria-label="Choose your capital ship"></div>
+      <button class="intro__launch" id="launch-button" type="button">Launch</button>
+    </div>
+  </div>
+
+  <button class="menu-button" id="menu-button" type="button" aria-label="Return to ship selection">Menu</button>
+  <div class="score-display" id="score-display" aria-label="Score">Score 0</div>
+
+  <canvas id="game-canvas" aria-label="Capital Ship game canvas"></canvas>
+
+  <script type="module" src="js/game.js"></script>
+</body>
+</html>

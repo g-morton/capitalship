@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="72" height="72" viewBox="0 0 72 72">
+  <defs>
+    <clipPath id="clip-weapon-large-missilearray">
+      <rect width="72" height="72"/>
+    </clipPath>
+  </defs>
+  <g id="weapon-large-missilearray" clip-path="url(#clip-weapon-large-missilearray)">
+    <path id="Union_53" data-name="Union 53" d="M-356.5,662.5V658H-364V628.5h-5.5v-12h5.5V610h3.42c.88-3.515,3.047-6,5.58-6s4.7,2.486,5.579,6h3.841c.88-3.515,3.046-6,5.579-6s4.7,2.486,5.58,6h3.84c.88-3.515,3.047-6,5.58-6s4.7,2.486,5.58,6H-316v6.5h6.5v12H-316V658h-7.5v4.5Z" transform="translate(376 -598)" stroke="#fff" stroke-width="2"/>
+  </g>
+</svg>

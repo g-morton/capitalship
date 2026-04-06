@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="68" height="68" viewBox="0 0 68 68">
+  <defs>
+    <clipPath id="clip-mine">
+      <rect width="68" height="68"/>
+    </clipPath>
+  </defs>
+  <g id="mine" clip-path="url(#clip-mine)">
+    <circle id="Ellipse_5" data-name="Ellipse 5" cx="22" cy="22" r="22" transform="translate(12 12)"/>
+    <path id="Polygon_1" data-name="Polygon 1" d="M6,0l6,18H0Z" transform="translate(28 2)"/>
+    <path id="Polygon_2" data-name="Polygon 2" d="M6,0l6,18H0Z" transform="translate(40 67) rotate(180)"/>
+    <g id="Group_1" data-name="Group 1" transform="translate(69.5 -16) rotate(90)">
+      <path id="Polygon_3" data-name="Polygon 3" d="M6,0l6,18H0Z" transform="translate(44 3)"/>
+      <path id="Polygon_4" data-name="Polygon 4" d="M6,0l6,18H0Z" transform="translate(56 68) rotate(180)"/>
+    </g>
+    <g id="Group_2" data-name="Group 2" transform="translate(23.747 -26.458) rotate(45)">
+      <path id="Polygon_3-2" data-name="Polygon 3" d="M6,0l6,18H0Z" transform="translate(44 3)"/>
+      <path id="Polygon_4-2" data-name="Polygon 4" d="M6,0l6,18H0Z" transform="translate(56 68) rotate(180)"/>
+    </g>
+    <g id="Group_3" data-name="Group 3" transform="translate(-26.458 44.253) rotate(-45)">
+      <path id="Polygon_3-3" data-name="Polygon 3" d="M6,0l6,18H0Z" transform="translate(44 3)"/>
+      <path id="Polygon_4-3" data-name="Polygon 4" d="M6,0l6,18H0Z" transform="translate(56 68) rotate(180)"/>
+    </g>
+    <circle id="Ellipse_6" data-name="Ellipse 6" cx="4.5" cy="4.5" r="4.5" transform="translate(38 21)" fill="#fff"/>
+  </g>
+</svg>

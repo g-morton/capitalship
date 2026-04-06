@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="723" height="106" viewBox="0 0 723 106">
+  <defs>
+    <clipPath id="clip-ship-4-galactica">
+      <rect width="723" height="106"/>
+    </clipPath>
+  </defs>
+  <g id="ship-4-galactica" clip-path="url(#clip-ship-4-galactica)">
+    <path id="Subtraction_16" data-name="Subtraction 16" d="M515.7,89.806c-29.745,0-82.773-2.312-83.267-2.335v-2l-21.784-.895-3.475-.933-179.76-.409h-.006c-1.042-.2-25.749-4.906-46.275-5.94-3.157-.157-6.367-.237-9.54-.237a183.69,183.69,0,0,0-27.613,1.974H89.243c-.2,0-19.72-.481-34.894-1.737-15.122-1.251-27.065-3.382-27.182-3.4V60.337L57.2,54.764l-7.342-3.571V32.736l-.051,0c-1.615-.171-16.117-1.725-27.732-3.746C10,26.882.088,24.086,0,24.059V6.7l.011,0c1.146-.152,28.568-3.745,71.854-5.5C92.655.359,106.438,0,117.955,0c18.234,0,31.607.937,44.713,3.133,20.824,3.491,51.816,8.947,55.281,9.557l.1.018.016,0,9.345-9.579h9.245V5.6h8.009l7.777-4.339h9.544V3.133h24.03l1.334,2.47h64.53V1.548h16.685V5.6h5.959V1.548h16.685V5.6h22.1l38.048-2.47L489.6,1.265a236.515,236.515,0,0,1,25.072-1.1c9.217,0,18.86.37,28.66,1.1C574.641,3.6,601.551,9.23,625.294,14.2l.02,0,.015,0,4.194.877c12.993,2.712,29.037,7.7,40.208,11.412,7.211,2.394,13.458,4.605,17.428,6.039h5.587v4.2l3.011,5.01v8.666H708.24V52.8H688.278l-1.654.068-4.45,2.567H664.143v2.133H647.457V55.431h-3V53.195h-2.869l-9.878,17.518h8.593v-.039h20.261v2.383h-11.9a35.129,35.129,0,0,1-4.038,3.59,40.785,40.785,0,0,1-7.919,4.712,46.39,46.39,0,0,1-11.523,3.47c-17.463,2.924-69.623,4.162-97.645,4.827h-.048l-2.042.048C522.719,89.772,519.44,89.806,515.7,89.806Zm18.533-10.789v4.767h25.028V79.017ZM249.387,69.483v7.15H305.4v-7.15ZM621.1,53.988l2.053,15.048,7.7-15.048H621.1ZM383.736,20.494h0V32.461h12.244L383.736,20.494Zm-23.614,0h0L347.879,32.461h12.243V20.494Zm-54.72,0V32.461h12.244L305.4,20.494Zm-23.614,0L269.545,32.461h12.243ZM55.119,11.082V15.85h4.768V11.082Zm-9.535,0V15.85h4.768V11.082Zm-9.535,0V15.85h4.768V11.082Zm-9.534,0V15.85h4.767V11.082Z" transform="translate(5.752 5.701)"/>
+    <g id="Ellipse_45" data-name="Ellipse 45" transform="translate(609 70)" fill="#fff" stroke="#000" stroke-width="3">
+      <ellipse cx="7" cy="7.5" rx="7" ry="7.5" stroke="none"/>
+      <ellipse cx="7" cy="7.5" rx="8.5" ry="9" fill="none"/>
+    </g>
+    <g id="Ellipse_46" data-name="Ellipse 46" transform="translate(504 76)" fill="#fff" stroke="#000" stroke-width="3">
+      <circle cx="7.5" cy="7.5" r="7.5" stroke="none"/>
+      <circle cx="7.5" cy="7.5" r="9" fill="none"/>
+    </g>
+    <g id="Ellipse_48" data-name="Ellipse 48" transform="translate(353 76)" fill="#fff" stroke="#000" stroke-width="3">
+      <ellipse cx="7" cy="7.5" rx="7" ry="7.5" stroke="none"/>
+      <ellipse cx="7" cy="7.5" rx="8.5" ry="9" fill="none"/>
+    </g>
+    <g id="Ellipse_51" data-name="Ellipse 51" transform="translate(324 7)" fill="#fff" stroke="#000" stroke-width="3">
+      <circle cx="7.5" cy="7.5" r="7.5" stroke="none"/>
+      <circle cx="7.5" cy="7.5" r="9" fill="none"/>
+    </g>
+    <g id="Ellipse_47" data-name="Ellipse 47" transform="translate(485 76)" fill="#fff" stroke="#000" stroke-width="3">
+      <ellipse cx="7" cy="7.5" rx="7" ry="7.5" stroke="none"/>
+      <ellipse cx="7" cy="7.5" rx="8.5" ry="9" fill="none"/>
+    </g>
+    <g id="Ellipse_49" data-name="Ellipse 49" transform="translate(334 76)" fill="#fff" stroke="#000" stroke-width="3">
+      <ellipse cx="7" cy="7.5" rx="7" ry="7.5" stroke="none"/>
+      <ellipse cx="7" cy="7.5" rx="8.5" ry="9" fill="none"/>
+    </g>
+    <g id="Ellipse_52" data-name="Ellipse 52" transform="translate(305 7)" fill="#fff" stroke="#000" stroke-width="3">
+      <ellipse cx="7" cy="7.5" rx="7" ry="7.5" stroke="none"/>
+      <ellipse cx="7" cy="7.5" rx="8.5" ry="9" fill="none"/>
+    </g>
+    <g id="Ellipse_50" data-name="Ellipse 50" transform="translate(199 69)" fill="#fff" stroke="#000" stroke-width="3">
+      <ellipse cx="7" cy="7.5" rx="7" ry="7.5" stroke="none"/>
+      <ellipse cx="7" cy="7.5" rx="8.5" ry="9" fill="none"/>
+    </g>
+    <g id="Rectangle_52" data-name="Rectangle 52" transform="translate(662 49)" fill="#fff" stroke="#000" stroke-width="3">
+      <rect width="14" height="14" stroke="none"/>
+      <rect x="-1.5" y="-1.5" width="17" height="17" fill="none"/>
+    </g>
+  </g>
+</svg>

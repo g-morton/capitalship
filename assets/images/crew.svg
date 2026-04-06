@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="25" height="34" viewBox="0 0 25 34">
+  <defs>
+    <clipPath id="clip-crew">
+      <rect width="25" height="34"/>
+    </clipPath>
+  </defs>
+  <g id="crew" clip-path="url(#clip-crew)">
+    <circle id="Ellipse_9" data-name="Ellipse 9" cx="4.5" cy="4.5" r="4.5" transform="translate(8 2.25)"/>
+    <line id="Line_1" data-name="Line 1" y2="14.75" transform="translate(12.5 6.75)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="2"/>
+    <line id="Line_2" data-name="Line 2" y1="9" x2="6" transform="translate(6.5 20.75)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="2"/>
+    <line id="Line_4" data-name="Line 4" x2="8" y2="4.25" transform="translate(4.5 10.5)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="2"/>
+    <line id="Line_5" data-name="Line 5" x1="8" y2="4.25" transform="translate(12.5 10.5)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="2"/>
+    <line id="Line_3" data-name="Line 3" x1="6" y1="9" transform="translate(12.5 20.75)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="2"/>
+  </g>
+</svg>
