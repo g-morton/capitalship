@@ -1,7 +1,7 @@
 import {
   ENEMY_EXPLODE_SOUNDS,
   getDroppableWeapons,
-  getLightWeapons,
+  getEnemyWeaponDef,
   getShipDrag,
   getShipMaxHitPoints,
   getShipRepairRate,
@@ -34,6 +34,7 @@ const introShipPicker = document.getElementById("intro-ship-picker");
 const launchButton = document.getElementById("launch-button");
 const menuButton = document.getElementById("menu-button");
 const scoreDisplay = document.getElementById("score-display");
+const playtestHitboxesToggle = document.getElementById("playtest-hitboxes");
 
 const pointer = { x: window.innerWidth * 0.75, y: window.innerHeight * 0.5, down: false };
 const keys = new Set();
@@ -62,11 +63,16 @@ const world = {
   enemyShips: [],
   activeBossIndex: 0,
   defeatedBossCount: 0,
+  stageIndex: 0,
+  stagePhase: "hazard",
+  stageHazardType: "mine",
+  stageHazardsRemaining: 0,
+  stageEnemyShipsRemaining: 0,
   bossEncounter: null,
   nextBossScore: 1000,
   mineSpawnCount: 0,
   lastMineSpawnAt: 0,
-  lastOrbSpawnAt: 0,
+  lastEnemyShipSpawnAt: 0,
   score: 0,
   scene: "intro",
   transitionStartedAt: 0,
@@ -77,22 +83,65 @@ const world = {
   lastFrame: performance.now(),
   audioWarmed: false,
   playerScaleMultiplier: 0.8,
+  debugHitboxes: false,
 };
 
-const MAX_ACTIVE_SPORES = 8;
-const MAX_ACTIVE_ORBS = 2;
+const MAX_ACTIVE_SPORES = 6;
+const MAX_ACTIVE_ENEMY_SHIPS = 2;
 
-function getEnemyOrbRecord() {
-  return world.enemyShips?.find((enemy) => enemy.id === "enemy-orb") || null;
+function getEnemyShipSpawnCap() {
+  return world.defeatedBossCount >= 2 ? 2 : 1;
 }
 
-function getRandomEnemyLightWeaponId() {
-  const pool = getLightWeapons().filter((weapon) => weapon.id !== "pd");
-  return pool[Math.floor(Math.random() * pool.length)]?.id || "snubcannon";
+function getActiveEnemyShipCount() {
+  return world.enemies.filter((enemy) => enemy.type === "enemy-ship" && enemy.hitPoints > 0).length;
 }
 
-function getActiveOrbCount() {
-  return world.enemies.filter((enemy) => enemy.type === "enemy-orb" && enemy.hitPoints > 0).length;
+function getActiveStageHazardCount() {
+  return world.enemies.filter((enemy) => enemy.stageHazard && enemy.hitPoints > 0 && (enemy.life === undefined || enemy.life > 0)).length;
+}
+
+function chooseEnemyShipRecord() {
+  const records = world.enemyShips || [];
+  if (!records.length) {
+    return null;
+  }
+
+  const enemyWaveId = world.stageIndex === 0
+    ? "enemy-orb-light"
+    : world.stageIndex === 1
+      ? "enemy-orb-heavy"
+      : "enemy-dart";
+
+  const matchingRecord = records.find((record) => record.id === enemyWaveId);
+  if (matchingRecord) {
+    return matchingRecord;
+  }
+
+  return records[0];
+}
+
+function getStageHazardType() {
+  return world.stageIndex % 2 === 0 ? "mine" : "spore";
+}
+
+function getStageHazardCount() {
+  return world.stageHazardType === "mine"
+    ? (5 + Math.min(world.stageIndex, 3)) * 4
+    : 4 + Math.min(world.stageIndex, 3);
+}
+
+function getStageEnemyShipCount() {
+  return world.stageIndex >= 2 ? 3 : 2;
+}
+
+function prepareNextStage() {
+  world.stageHazardType = getStageHazardType();
+  world.stageHazardsRemaining = getStageHazardCount();
+  world.stageEnemyShipsRemaining = getStageEnemyShipCount();
+  world.stagePhase = "hazard";
+  world.lastMineSpawnAt = 0;
+  world.lastEnemyShipSpawnAt = 0;
 }
 
 
@@ -173,13 +222,26 @@ function getShipBounds(ship) {
 
 function getShipCollisionCircles(ship) {
   const bounds = getShipBounds(ship);
-  const hullRadius = Math.min(bounds.height * 0.22, bounds.width * 0.12);
-  const span = Math.max(hullRadius * 0.9, bounds.width * 0.2);
+  if (ship.hitCircles?.length) {
+    return ship.hitCircles.map((circle) => ({
+      x: world.player.x + (circle.x + circle.radius - ship.width * 0.5) * bounds.scale,
+      y: world.player.y + (circle.y + circle.radius - ship.height * 0.5) * bounds.scale,
+      radius: circle.radius * bounds.scale,
+    }));
+  }
+
+  const hullRadius = Math.min(bounds.height * 0.24, bounds.width * 0.14);
+  const rearSpan = Math.max(hullRadius * 1.05, bounds.width * 0.28);
+  const frontSpan = Math.max(hullRadius * 0.95, bounds.width * 0.19);
+  const upperOffset = bounds.height * 0.1;
+  const lowerOffset = bounds.height * 0.08;
 
   return [
-    { x: world.player.x - span, y: world.player.y, radius: hullRadius * 0.95 },
-    { x: world.player.x, y: world.player.y, radius: hullRadius },
-    { x: world.player.x + span, y: world.player.y, radius: hullRadius * 0.92 },
+    { x: world.player.x - rearSpan, y: world.player.y + lowerOffset * 0.35, radius: hullRadius * 0.9 },
+    { x: world.player.x - frontSpan, y: world.player.y - upperOffset, radius: hullRadius * 1.02 },
+    { x: world.player.x + bounds.width * 0.02, y: world.player.y, radius: hullRadius * 1.08 },
+    { x: world.player.x + frontSpan, y: world.player.y - upperOffset * 0.45, radius: hullRadius },
+    { x: world.player.x + rearSpan, y: world.player.y + lowerOffset * 0.15, radius: hullRadius * 0.86 },
   ];
 }
 
@@ -246,19 +308,30 @@ function updateEnemies(deltaSeconds) {
   updateBossEncounter(deltaSeconds);
 
   const now = performance.now();
-  if (!shouldPauseMineSpawns() && now - world.lastMineSpawnAt > 1500) {
-    spawnMine();
-    world.lastMineSpawnAt = now;
-  }
-  if (shouldSpawnEnemyOrbs() && now - world.lastOrbSpawnAt > 3400) {
-    spawnEnemyOrb();
-    world.lastOrbSpawnAt = now;
+  if (!shouldPauseMineSpawns()) {
+    if (shouldSpawnBossPreviewSupport() && now - world.lastEnemyShipSpawnAt > 2600) {
+      spawnEnemyShip();
+      world.lastEnemyShipSpawnAt = now;
+    }
+
+    if (world.stagePhase === "hazard" && shouldSpawnStageHazard() && now - world.lastMineSpawnAt > 1500) {
+      spawnStageHazard();
+      world.lastMineSpawnAt = now;
+    }
+
+    if (world.stagePhase === "ships" && shouldSpawnEnemyShips() && now - world.lastEnemyShipSpawnAt > 3400) {
+      spawnEnemyShip();
+      world.stageEnemyShipsRemaining = Math.max(0, world.stageEnemyShipsRemaining - 1);
+      world.lastEnemyShipSpawnAt = now;
+    }
   }
 
   world.enemies = world.enemies.filter((enemy) => {
     updateEnemy(enemy, deltaSeconds);
     return enemy.x > -120 && enemy.hitPoints > 0 && (enemy.life === undefined || enemy.life > 0);
   });
+
+  updateStageProgression();
 
   handleShipCollisions();
 }
@@ -268,11 +341,22 @@ function shouldPauseMineSpawns() {
   return Boolean(encounter && encounter.phase !== "preview");
 }
 
-function shouldSpawnEnemyOrbs() {
-  return world.defeatedBossCount > 0
-    && getActiveOrbCount() < MAX_ACTIVE_ORBS
+function shouldSpawnBossPreviewSupport() {
+  return world.stagePhase === "boss"
+    && world.bossEncounter?.phase === "preview"
+    && getActiveEnemyShipCount() < 1
+    && Boolean(world.enemyShips?.length);
+}
+
+function shouldSpawnStageHazard() {
+  return world.stageHazardsRemaining > 0;
+}
+
+function shouldSpawnEnemyShips() {
+  return world.stageEnemyShipsRemaining > 0
+    && getActiveEnemyShipCount() < Math.min(MAX_ACTIVE_ENEMY_SHIPS, getEnemyShipSpawnCap())
     && !shouldPauseMineSpawns()
-    && Boolean(getEnemyOrbRecord());
+    && Boolean(world.enemyShips?.length);
 }
 
 function updateEnemy(enemy, deltaSeconds) {
@@ -294,7 +378,11 @@ function updateEnemy(enemy, deltaSeconds) {
     const pathOffset = Math.sin((enemy.age || 0) * (enemy.pathFrequency || 2.3) + (enemy.patternPhase || 0))
       * (enemy.pathAmplitude || 18);
     const secondaryWave = Math.cos((enemy.age || 0) * 1.25 + (enemy.wobblePhase || 0)) * (enemy.wobbleAmplitude || 10);
-    const desiredVy = pathOffset + secondaryWave;
+    let desiredVy = pathOffset + secondaryWave;
+    if (enemy.driftMode === "boss") {
+      const playerDy = world.player.y - enemy.y;
+      desiredVy += Math.max(-70, Math.min(70, playerDy * 0.22));
+    }
     enemy.vx += (desiredVx - enemy.vx) * Math.min(1, deltaSeconds * 1.6);
     enemy.vy += (desiredVy - enemy.vy) * Math.min(1, deltaSeconds * 1.35);
     enemy.x += enemy.vx * deltaSeconds;
@@ -302,15 +390,15 @@ function updateEnemy(enemy, deltaSeconds) {
     return;
   }
 
-  if (enemy.type === "enemy-orb") {
+  if (enemy.type === "enemy-ship") {
     enemy.phase = (enemy.phase || 0) + deltaSeconds;
     const desiredX = enemy.patrolX + Math.sin(enemy.phase * enemy.patrolFrequency) * enemy.patrolAmplitude;
     const desiredY = enemy.baseY + Math.sin(enemy.phase * enemy.wobbleFrequency) * enemy.wobbleAmplitude;
     enemy.x += (desiredX - enemy.x) * Math.min(1, deltaSeconds * enemy.driftResponsiveness);
     enemy.y += (desiredY - enemy.y) * Math.min(1, deltaSeconds * (enemy.driftResponsiveness * 0.9));
-    enemy.rotation = Math.sin(enemy.phase * 1.4) * 0.08;
-    updateEnemyOrbWeapons(enemy);
-    fireEnemyOrbWeapons(enemy);
+    enemy.rotation = Math.sin(enemy.phase * 1.4) * (enemy.rotationAmplitude || 0.08);
+    updateEnemyShipWeapons(enemy);
+    fireEnemyShipWeapons(enemy);
     return;
   }
 
@@ -329,16 +417,14 @@ function updateEnemy(enemy, deltaSeconds) {
     enemy.y += (desiredY - enemy.y) * Math.min(1, deltaSeconds * 0.45);
     enemy.rotation = 0;
     enemy.hitCircles = getBossHitCircles(enemy);
+    updateBossWeapons(enemy);
+    fireBossWeapons(enemy);
   }
 }
 
 function updateBossEncounter(deltaSeconds) {
   if (world.bossEncounter) {
     world.bossEncounter.phaseTime += deltaSeconds;
-  }
-
-  if (!world.bossEncounter && world.score >= world.nextBossScore && world.bosses.length > 0) {
-    startBossEncounter();
   }
 
   const encounter = world.bossEncounter;
@@ -380,6 +466,23 @@ function updateBossEncounter(deltaSeconds) {
   }
 }
 
+function updateStageProgression() {
+  if (world.scene !== "running" || world.bossEncounter) {
+    return;
+  }
+
+  if (world.stagePhase === "hazard" && world.stageHazardsRemaining <= 0 && getActiveStageHazardCount() === 0) {
+    world.stagePhase = "ships";
+    world.lastEnemyShipSpawnAt = 0;
+    return;
+  }
+
+  if (world.stagePhase === "ships" && world.stageEnemyShipsRemaining <= 0 && getActiveEnemyShipCount() <= 1) {
+    world.stagePhase = "boss";
+    startBossEncounter();
+  }
+}
+
 function startBossEncounter() {
   const bossRecord = world.bosses[world.activeBossIndex % world.bosses.length];
   world.activeBossIndex += 1;
@@ -397,8 +500,8 @@ function startBossEncounter() {
     previewScale,
     previewWidth: bossRecord.width * previewScale,
     previewHeight: bossRecord.height * previewScale,
-    previewSpeed: 42,
-    cinematicDuration: 3.4,
+    previewSpeed: 78,
+    cinematicDuration: 2.1,
   };
 }
 
@@ -414,6 +517,8 @@ function spawnBossEnemy(bossRecord) {
     };
   });
   const parsedSpawnPoints = (bossRecord.hardpoints || []).filter((point) => point.type === "light");
+  const activeSpawnPoints = parsedSpawnPoints.slice(0, intendedSpawnCount);
+  const firingPoints = activeSpawnPoints.length ? activeSpawnPoints : fallbackSpawnPoints;
   const boss = {
     type: "boss",
     bossId: bossRecord.id,
@@ -421,6 +526,7 @@ function spawnBossEnemy(bossRecord) {
     image: bossRecord.image,
     width: bossRecord.width,
     height: bossRecord.height,
+    hitCircleDefs: bossRecord.hitCircles || [],
     hardpoints: bossRecord.hardpoints || [],
     x: world.width + world.width * 0.35,
     y: world.height * 0.14,
@@ -434,17 +540,26 @@ function spawnBossEnemy(bossRecord) {
       bossRecord.height * Math.min(world.width * 0.46 / bossRecord.width, world.height * 0.56 / bossRecord.height),
     ) * 0.32,
     scoreValue: 650,
-    sporeSpawnPoints: parsedSpawnPoints.slice(0, intendedSpawnCount),
+    sporeSpawnPoints: activeSpawnPoints,
     fallbackSpawnPoints,
-    lastSporeAt: 0,
-    sporeCooldown: 2650,
-    sporesPrimed: false,
+    weaponMounts: firingPoints.map((hardpoint) => ({
+      hardpoint,
+      weaponId: "enemy-shot-3",
+      cooldownUntil: performance.now() + 500 + Math.random() * 900,
+      angle: Math.PI,
+    })),
+    bossProjectileDamageScale: 0.62,
+    bossProjectileSpeedScale: 0.88,
+    bossProjectileCooldownScale: 1.95,
+    nextVolleyIndex: 0,
+    nextBossVolleyAt: performance.now() + 1200,
+    lastSporeAt: performance.now(),
+    sporeCooldown: 6400,
   };
   boss.hitCircles = getBossHitCircles(boss);
 
   world.enemies.push(boss);
   world.bossEncounter.bossEnemy = boss;
-  spawnSpores(boss, 2);
 }
 
 function getBossScale(enemy) {
@@ -470,33 +585,45 @@ function getBossMountWorldPosition(hardpoint, enemy) {
 
 function getBossHitCircles(enemy) {
   const bounds = getBossBounds(enemy);
-  const centerRadius = Math.min(bounds.height * 0.28, bounds.width * 0.11);
+  if (enemy.hitCircleDefs?.length) {
+    return enemy.hitCircleDefs.map((circle) => ({
+      x: enemy.x + (circle.x + circle.radius - enemy.width * 0.5) * bounds.scale,
+      y: enemy.y + (circle.y + circle.radius - enemy.height * 0.5) * bounds.scale,
+      radius: circle.radius * bounds.scale,
+    }));
+  }
+
+  const centerRadius = Math.min(bounds.height * 0.29, bounds.width * 0.115);
   const sideRadius = centerRadius * 0.88;
   const span = bounds.width * 0.22;
   const verticalOffset = bounds.height * 0.06;
 
   if (enemy.bossId === "boss-oculyte") {
     return [
-      { x: enemy.x - span * 0.55, y: enemy.y, radius: sideRadius * 0.95 },
-      { x: enemy.x, y: enemy.y - verticalOffset * 0.5, radius: centerRadius },
-      { x: enemy.x + span * 0.58, y: enemy.y, radius: sideRadius * 0.92 },
+      { x: enemy.x - span * 0.72, y: enemy.y + verticalOffset * 0.08, radius: sideRadius * 0.9 },
+      { x: enemy.x - span * 0.18, y: enemy.y - verticalOffset * 0.55, radius: centerRadius * 0.95 },
+      { x: enemy.x + span * 0.22, y: enemy.y - verticalOffset * 0.42, radius: centerRadius * 0.98 },
+      { x: enemy.x + span * 0.78, y: enemy.y + verticalOffset * 0.05, radius: sideRadius * 0.88 },
     ];
   }
 
   if (enemy.bossId === "boss-karnyx") {
     return [
-      { x: enemy.x - span, y: enemy.y + verticalOffset * 0.2, radius: sideRadius * 0.9 },
-      { x: enemy.x - span * 0.2, y: enemy.y - verticalOffset * 0.5, radius: centerRadius * 0.92 },
-      { x: enemy.x + span * 0.45, y: enemy.y, radius: centerRadius },
-      { x: enemy.x + span * 1.02, y: enemy.y + verticalOffset * 0.25, radius: sideRadius * 0.82 },
+      { x: enemy.x - span * 0.02, y: enemy.y - bounds.height * 0.24, radius: centerRadius * 1.04 },
+      { x: enemy.x - span * 0.86, y: enemy.y + verticalOffset * 0.2, radius: sideRadius * 0.92 },
+      { x: enemy.x - span * 0.34, y: enemy.y - verticalOffset * 0.5, radius: centerRadius * 0.96 },
+      { x: enemy.x + span * 0.18, y: enemy.y - verticalOffset * 0.08, radius: centerRadius * 1.02 },
+      { x: enemy.x + span * 0.76, y: enemy.y + verticalOffset * 0.12, radius: centerRadius * 0.94 },
+      { x: enemy.x + span * 1.18, y: enemy.y + verticalOffset * 0.28, radius: sideRadius * 0.82 },
     ];
   }
 
   return [
-    { x: enemy.x - span * 1.1, y: enemy.y + verticalOffset * 0.35, radius: sideRadius * 0.84 },
-    { x: enemy.x - span * 0.35, y: enemy.y - verticalOffset * 0.25, radius: centerRadius * 0.9 },
-    { x: enemy.x + span * 0.42, y: enemy.y - verticalOffset * 0.18, radius: centerRadius * 0.94 },
-    { x: enemy.x + span * 1.14, y: enemy.y + verticalOffset * 0.28, radius: sideRadius * 0.8 },
+    { x: enemy.x - span * 1.12, y: enemy.y + verticalOffset * 0.35, radius: sideRadius * 0.86 },
+    { x: enemy.x - span * 0.5, y: enemy.y - verticalOffset * 0.35, radius: centerRadius * 0.94 },
+    { x: enemy.x + span * 0.05, y: enemy.y - verticalOffset * 0.28, radius: centerRadius * 0.98 },
+    { x: enemy.x + span * 0.62, y: enemy.y - verticalOffset * 0.1, radius: centerRadius * 0.92 },
+    { x: enemy.x + span * 1.22, y: enemy.y + verticalOffset * 0.28, radius: sideRadius * 0.82 },
   ];
 }
 
@@ -534,19 +661,12 @@ function updateBossSporeSpawns(enemy) {
     return;
   }
 
-  if (!enemy.sporesPrimed) {
-    enemy.sporesPrimed = true;
-    enemy.lastSporeAt = now;
-    spawnSpores(enemy, 2);
-    return;
-  }
-
   if (now < enemy.lastSporeAt + enemy.sporeCooldown || !world.sporeImage) {
     return;
   }
 
   enemy.lastSporeAt = now;
-  spawnSpores(enemy, 2);
+  spawnSpores(enemy, 1);
 }
 
 function spawnSpores(enemy, clusterSize) {
@@ -584,27 +704,27 @@ function spawnSpores(enemy, clusterSize) {
         x: emittedX,
         y: emittedY,
         driftMode: "boss",
-        vx: Math.cos(angle) * (110 + Math.random() * 18),
-        vy: Math.sin(angle) * (48 + Math.random() * 14),
-        baseSpeed: 135 + Math.random() * 18,
-        targetSpeed: 245 + Math.random() * 26,
-        accelerationDuration: 1.8,
+        vx: Math.cos(angle) * (70 + Math.random() * 12),
+        vy: Math.sin(angle) * (26 + Math.random() * 10),
+        baseSpeed: 85 + Math.random() * 14,
+        targetSpeed: 155 + Math.random() * 22,
+        accelerationDuration: 2.1,
         life: 16,
         spawnGraceUntil: performance.now() + 250,
         age: 0,
         radius: 10,
-        hitPoints: Math.max(18, SPORE_HIT_POINTS * 0.55),
-        maxHitPoints: Math.max(18, SPORE_HIT_POINTS * 0.55),
+        hitPoints: Math.max(18, SPORE_HIT_POINTS * 0.7),
+        maxHitPoints: Math.max(18, SPORE_HIT_POINTS * 0.7),
         rotation: 0,
         rotationSpeed: 0,
         patternPhase: Math.random() * Math.PI * 2,
-        pathAmplitude: 16 + Math.random() * 16,
-        pathFrequency: 2.1 + Math.random() * 0.9,
-        forwardDrift: 18 + Math.random() * 22,
+        pathAmplitude: 12 + Math.random() * 12,
+        pathFrequency: 1.7 + Math.random() * 0.7,
+        forwardDrift: 12 + Math.random() * 18,
         wobblePhase: Math.random() * Math.PI * 2,
-        wobbleAmplitude: 9 + Math.random() * 5,
+        wobbleAmplitude: 7 + Math.random() * 4,
         scoreValue: 120,
-        collisionDamage: SPORE_COLLISION_DAMAGE,
+        collisionDamage: SPORE_COLLISION_DAMAGE + 12,
       });
       spawned += 1;
     }
@@ -633,51 +753,159 @@ function spawnMine() {
     hitPoints: isLarge ? MINE_HIT_POINTS * 2 : MINE_HIT_POINTS,
     maxHitPoints: isLarge ? MINE_HIT_POINTS * 2 : MINE_HIT_POINTS,
     radius: isLarge ? 33 : 22,
-    scale: isLarge ? 1.32 : 0.88,
+    scale: isLarge ? 1.00 : 0.40,
     isLarge,
     scoreValue: isLarge ? 180 : 60,
   });
 }
 
-function spawnEnemyOrb() {
-  const orbRecord = getEnemyOrbRecord();
-  if (!orbRecord) {
+function spawnStageHazard() {
+  if (world.stageHazardsRemaining <= 0) {
     return;
   }
 
-  const weaponId = getRandomEnemyLightWeaponId();
-  const hardpoint = orbRecord.lightHardpoints?.[0] || orbRecord.hardpoints?.find((point) => point.type === "light");
+  if (world.stageHazardType === "spore") {
+    spawnStageSpore();
+  } else {
+    spawnMine();
+    const spawnedMine = world.enemies[world.enemies.length - 1];
+    if (spawnedMine?.type === "mine") {
+      spawnedMine.stageHazard = true;
+    }
+  }
+
+  world.stageHazardsRemaining = Math.max(0, world.stageHazardsRemaining - 1);
+}
+
+function spawnStageSpore() {
+  if (!world.sporeImage) {
+    return;
+  }
+
+  const spawnY = 80 + Math.random() * (world.height - 160);
+  world.enemies.push({
+    type: "spore",
+    stageHazard: true,
+    x: world.width + 60,
+    y: spawnY,
+    driftMode: "stage",
+    vx: -(70 + Math.random() * 15),
+    vy: (Math.random() - 0.5) * 28,
+    baseSpeed: 90 + Math.random() * 20,
+    targetSpeed: 155 + Math.random() * 25,
+    accelerationDuration: 1.9,
+    life: 18,
+    spawnGraceUntil: performance.now() + 250,
+    age: 0,
+    radius: 10,
+    hitPoints: Math.max(18, SPORE_HIT_POINTS * 0.7),
+    maxHitPoints: Math.max(18, SPORE_HIT_POINTS * 0.7),
+    rotation: 0,
+    rotationSpeed: 0,
+    patternPhase: Math.random() * Math.PI * 2,
+    pathAmplitude: 14 + Math.random() * 14,
+    pathFrequency: 1.6 + Math.random() * 0.8,
+    forwardDrift: 10 + Math.random() * 16,
+    wobblePhase: Math.random() * Math.PI * 2,
+    wobbleAmplitude: 7 + Math.random() * 4,
+    scoreValue: 120,
+    collisionDamage: SPORE_COLLISION_DAMAGE + 12,
+  });
+}
+
+function getEnemyShipScale(enemy) {
+  return enemy.radius * 2 / Math.max(enemy.width, enemy.height);
+}
+
+function getEnemyShipProfile(record) {
+  if (!record) {
+    return null;
+  }
+
+  if (record.id === "enemy-orb-heavy") {
+    return {
+      radius: 72,
+      hitPoints: 70,
+      collisionDamage: 42,
+      scoreValue: 180,
+      patrolAmplitude: 18 + Math.random() * 24,
+      patrolFrequency: 0.42 + Math.random() * 0.3,
+      wobbleAmplitude: 12 + Math.random() * 14,
+      wobbleFrequency: 0.55 + Math.random() * 0.35,
+      driftResponsiveness: 0.74 + Math.random() * 0.22,
+      rotationAmplitude: 0.05,
+    };
+  }
+
+  if (record.id === "enemy-dart") {
+    return {
+      radius: 76,
+      hitPoints: 92,
+      collisionDamage: 50,
+      scoreValue: 240,
+      patrolAmplitude: 36 + Math.random() * 40,
+      patrolFrequency: 0.85 + Math.random() * 0.45,
+      wobbleAmplitude: 10 + Math.random() * 10,
+      wobbleFrequency: 0.9 + Math.random() * 0.45,
+      driftResponsiveness: 1.25 + Math.random() * 0.25,
+      rotationAmplitude: 0.11,
+    };
+  }
+
+  return {
+    radius: 60,
+    hitPoints: 42,
+    collisionDamage: 30,
+    scoreValue: 110,
+    patrolAmplitude: 24 + Math.random() * 36,
+    patrolFrequency: 0.55 + Math.random() * 0.45,
+    wobbleAmplitude: 18 + Math.random() * 20,
+    wobbleFrequency: 0.7 + Math.random() * 0.5,
+    driftResponsiveness: 0.9 + Math.random() * 0.35,
+    rotationAmplitude: 0.08,
+  };
+}
+
+function spawnEnemyShip() {
+  const enemyRecord = chooseEnemyShipRecord();
+  if (!enemyRecord) {
+    return;
+  }
+
+  const profile = getEnemyShipProfile(enemyRecord);
+  const weaponId = enemyRecord.defaultEnemyShotId;
+  const hardpoint = enemyRecord.lightHardpoints?.[0] || enemyRecord.hardpoints?.find((point) => point.type === "light");
   const spawnY = 70 + Math.random() * (world.height - 140);
 
   world.enemies.push({
-    type: "enemy-orb",
-    image: orbRecord.image,
-    width: orbRecord.width,
-    height: orbRecord.height,
-    hardpoints: orbRecord.hardpoints || [],
+    type: "enemy-ship",
+    enemyId: enemyRecord.id,
+    image: enemyRecord.image,
+    width: enemyRecord.width,
+    height: enemyRecord.height,
+    hardpoints: enemyRecord.hardpoints || [],
     weaponMounts: hardpoint ? [{
       hardpoint,
       weaponId,
       cooldownUntil: performance.now() + 450 + Math.random() * 700,
-      burstShotsRemaining: 0,
-      burstCooldownUntil: 0,
       angle: Math.PI,
     }] : [],
     x: world.width + 70,
     y: spawnY,
     baseY: spawnY,
     patrolX: world.width * (0.66 + Math.random() * 0.2),
-    patrolAmplitude: 24 + Math.random() * 36,
-    patrolFrequency: 0.55 + Math.random() * 0.45,
-    driftResponsiveness: 0.9 + Math.random() * 0.35,
+    patrolAmplitude: profile.patrolAmplitude,
+    patrolFrequency: profile.patrolFrequency,
+    driftResponsiveness: profile.driftResponsiveness,
     phase: Math.random() * Math.PI * 2,
-    wobbleAmplitude: 18 + Math.random() * 20,
-    wobbleFrequency: 0.7 + Math.random() * 0.5,
-    radius: 26,
-    hitPoints: 42,
-    maxHitPoints: 42,
-    collisionDamage: 30,
-    scoreValue: 110,
+    wobbleAmplitude: profile.wobbleAmplitude,
+    wobbleFrequency: profile.wobbleFrequency,
+    radius: profile.radius,
+    hitPoints: profile.hitPoints,
+    maxHitPoints: profile.hitPoints,
+    collisionDamage: profile.collisionDamage,
+    scoreValue: profile.scoreValue,
+    rotationAmplitude: profile.rotationAmplitude,
     rotation: 0,
   });
 }
@@ -691,43 +919,109 @@ function getMountWorldPosition(hardpoint, ship) {
 }
 
 function getEnemyMountWorldPosition(hardpoint, enemy) {
-  const scale = enemy.radius * 2 / Math.max(enemy.width, enemy.height);
+  const scale = getEnemyShipScale(enemy);
   return {
     x: enemy.x + (hardpoint.x - enemy.width * 0.5) * scale,
     y: enemy.y + (hardpoint.y - enemy.height * 0.5) * scale,
   };
 }
 
-function updateEnemyOrbWeapons(enemy) {
+function updateEnemyShipWeapons(enemy) {
   for (const mount of enemy.weaponMounts || []) {
     const mountPos = getEnemyMountWorldPosition(mount.hardpoint, enemy);
     mount.angle = Math.atan2(world.player.y - mountPos.y, world.player.x - mountPos.x);
   }
 }
 
-function fireEnemyOrbWeapons(enemy) {
+function fireEnemyShipWeapons(enemy) {
   const now = performance.now();
   for (const mount of enemy.weaponMounts || []) {
-    const weapon = getWeaponDef(mount.weaponId);
-    if (!weapon || now < mount.cooldownUntil || now < mount.burstCooldownUntil) {
+    const weapon = getEnemyWeaponDef(mount.weaponId);
+    if (!weapon || now < mount.cooldownUntil) {
       continue;
     }
 
     const mountPos = getEnemyMountWorldPosition(mount.hardpoint, enemy);
     fireWeapon(mountPos, mount.angle, weapon, { target: { x: world.player.x, y: world.player.y }, isEnemy: true });
-
-    if (weapon.burstCount > 1) {
-      mount.burstShotsRemaining += 1;
-      if (mount.burstShotsRemaining >= weapon.burstCount) {
-        mount.burstShotsRemaining = 0;
-        mount.cooldownUntil = now + weapon.burstPause;
-      } else {
-        mount.cooldownUntil = now + weapon.burstSpacing;
-      }
-    } else {
-      mount.cooldownUntil = now + weapon.cooldown;
-    }
+    mount.cooldownUntil = now + weapon.cooldown + Math.random() * weapon.cooldown * 0.25;
   }
+}
+
+function updateBossWeapons(enemy) {
+  for (const mount of enemy.weaponMounts || []) {
+    mount.angle = Math.PI;
+  }
+}
+
+function getBossVolleyPattern(enemy) {
+  const patternSets = {
+    "boss-karnyx": [
+      [0],
+      [-0.18, 0, 0.18],
+      [-0.34, -0.12, 0.12, 0.34],
+    ],
+    "boss-myxolith": [
+      [-0.22, 0.22],
+      [-0.36, -0.12, 0.12, 0.36],
+      [-0.48, -0.24, 0, 0.24, 0.48],
+    ],
+    "boss-oculyte": [
+      [0],
+      [-0.14, 0.14],
+      [-0.28, 0, 0.28],
+    ],
+    "boss-umbryx": [
+      [-0.12, 0.12],
+      [-0.26, 0, 0.26],
+      [-0.42, -0.16, 0.16, 0.42],
+    ],
+    "boss-virexon": [
+      [-0.12, 0, 0.12],
+      [-0.28, 0.28],
+      [-0.46, -0.18, 0.18, 0.46],
+    ],
+  };
+
+  const patterns = patternSets[enemy.bossId] || [[0], [-0.18, 0.18], [-0.3, 0, 0.3]];
+  const nextIndex = enemy.nextVolleyIndex || 0;
+  enemy.nextVolleyIndex = (nextIndex + 1) % patterns.length;
+  return patterns[nextIndex];
+}
+
+function fireBossWeapons(enemy) {
+  const now = performance.now();
+  if (now < (enemy.nextBossVolleyAt || 0)) {
+    return;
+  }
+
+  const volleyOffsets = getBossVolleyPattern(enemy);
+  const mounts = enemy.weaponMounts || [];
+  let fired = false;
+
+  for (const [index, mount] of mounts.entries()) {
+    const weapon = getEnemyWeaponDef(mount.weaponId);
+    if (!weapon) {
+      continue;
+    }
+
+    const mountPos = getBossMountWorldPosition(mount.hardpoint, enemy);
+    const spreadOffset = volleyOffsets[index % volleyOffsets.length];
+    const volleyAngle = Math.PI + spreadOffset;
+    fireWeapon(mountPos, volleyAngle, {
+      ...weapon,
+      damage: Math.max(6, weapon.damage * (enemy.bossProjectileDamageScale || 1)),
+      projectileSpeed: weapon.projectileSpeed * (enemy.bossProjectileSpeedScale || 1),
+    }, { target: { x: world.player.x, y: world.player.y }, isEnemy: true });
+    mount.angle = volleyAngle;
+    fired = true;
+  }
+
+  if (!fired) {
+    return;
+  }
+
+  const weapon = getEnemyWeaponDef(mounts[0]?.weaponId);
+  enemy.nextBossVolleyAt = now + (weapon?.cooldown || 760) * (enemy.bossProjectileCooldownScale || 1) + 720 + Math.random() * 520;
 }
 
 function updateWeaponAim(ship) {
@@ -772,6 +1066,7 @@ function updateProjectiles(deltaSeconds) {
     projectile.x += projectile.vx * deltaSeconds;
     projectile.y += projectile.vy * deltaSeconds;
     projectile.rotation = Math.atan2(projectile.vy, projectile.vx);
+    projectile.spriteRotation = (projectile.spriteRotation || 0) + (projectile.spriteSpin || 0) * deltaSeconds;
     projectile.life -= deltaSeconds;
 
     if (projectile.trail) {
@@ -934,7 +1229,11 @@ function spawnWeaponProjectile(mount, angle, weapon, options = {}) {
     color: weapon.projectileColor,
     trail: Boolean(weapon.rocketTrail),
     rotation: angle,
+    spriteRotation: options.isEnemy ? Math.random() * Math.PI * 2 : 0,
+    spriteSpin: weapon.projectileSpin || 0,
     explosiveRadius: weapon.explosiveRadius || 0,
+    projectileSpriteId: weapon.projectileSpriteId || (options.isEnemy ? weapon.id : null),
+    projectileSize: weapon.projectileSize || null,
     age: 0,
     isEnemy: Boolean(options.isEnemy),
   };
@@ -1013,9 +1312,12 @@ function destroyEnemy(enemy) {
 
   if (enemy.type === "boss") {
     world.defeatedBossCount += 1;
+    world.stageIndex += 1;
     if (world.bossEncounter?.bossEnemy === enemy) {
       world.bossEncounter = null;
     }
+    prepareNextStage();
+    scatterBossWeaponDrops(enemy.x, enemy.y, 4);
     emitShipParts(world, enemy.x, enemy.y, 16, {
       minSpeed: 65,
       maxSpeed: 190,
@@ -1030,6 +1332,17 @@ function destroyEnemy(enemy) {
         maxSpeed: 170,
       });
     }
+  }
+}
+
+function scatterBossWeaponDrops(x, y, count) {
+  for (let i = 0; i < count; i += 1) {
+    const angle = (i / Math.max(1, count)) * Math.PI * 2 + Math.random() * 0.35;
+    const distance = 24 + Math.random() * 42;
+    spawnWeaponDrop(
+      x + Math.cos(angle) * distance,
+      y + Math.sin(angle) * distance,
+    );
   }
 }
 
@@ -1184,7 +1497,7 @@ function renderEnemies() {
   for (const enemy of world.enemies) {
     const image = enemy.type === "boss"
       ? enemy.image
-      : enemy.type === "enemy-orb"
+      : enemy.type === "enemy-ship"
         ? enemy.image
       : enemy.type === "spore"
         ? world.sporeImage
@@ -1206,15 +1519,12 @@ function renderEnemies() {
       continue;
     }
 
-    if (enemy.type === "enemy-orb") {
-      const scale = enemy.radius * 2 / Math.max(enemy.width, enemy.height);
+    if (enemy.type === "enemy-ship") {
+      const scale = getEnemyShipScale(enemy);
       const width = enemy.width * scale;
       const height = enemy.height * scale;
       ctx.drawImage(image, -width * 0.5, -height * 0.5, width, height);
       ctx.restore();
-      for (const mount of enemy.weaponMounts || []) {
-        renderTurret(getEnemyMountWorldPosition(mount.hardpoint, enemy), mount);
-      }
       continue;
     }
 
@@ -1347,6 +1657,19 @@ function renderProjectiles() {
       continue;
     }
 
+    const projectileImage = projectile.projectileSpriteId
+      ? world.enemyShotImages?.[projectile.projectileSpriteId]
+      : null;
+    if (projectileImage) {
+      const size = projectile.projectileSize || Math.max(16, projectile.radius * 4.5);
+      ctx.save();
+      ctx.translate(projectile.x, projectile.y);
+      ctx.rotate(projectile.rotation + (projectile.spriteRotation || 0));
+      ctx.drawImage(projectileImage, -size * 0.5, -size * 0.5, size, size);
+      ctx.restore();
+      continue;
+    }
+
     ctx.fillStyle = projectile.color;
     ctx.beginPath();
     ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
@@ -1458,6 +1781,54 @@ function renderVelocityIndicator() {
   ctx.fillText(`Velocity ${speed.toFixed(0)}`, 24, world.height - 26);
 }
 
+function renderDebugHitboxes() {
+  if (!world.debugHitboxes) {
+    return;
+  }
+
+  ctx.save();
+  ctx.fillStyle = "rgba(220, 20, 20, 0.22)";
+  ctx.strokeStyle = "rgba(220, 20, 20, 0.7)";
+  ctx.lineWidth = 1.5;
+
+  if (world.currentShip && (world.scene === "running" || world.scene === "dying")) {
+    for (const circle of getShipCollisionCircles(world.currentShip)) {
+      ctx.beginPath();
+      ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+
+  for (const enemy of world.enemies) {
+    const circles = enemy.type === "boss"
+      ? enemy.hitCircles || []
+      : [{ x: enemy.x, y: enemy.y, radius: enemy.radius || 0 }];
+
+    for (const circle of circles) {
+      if (!circle.radius) {
+        continue;
+      }
+      ctx.beginPath();
+      ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+
+  for (const projectile of world.projectiles) {
+    if (!projectile.radius) {
+      continue;
+    }
+    ctx.beginPath();
+    ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
 function renderHealthBar() {
   if (world.scene !== "running" && world.scene !== "dying") {
     return;
@@ -1536,12 +1907,17 @@ function resetGameplayState() {
   world.particles = [];
   world.drops = [];
   world.bossEncounter = null;
+  world.stageIndex = 0;
+  world.stagePhase = "hazard";
+  world.stageHazardType = "mine";
+  world.stageHazardsRemaining = 0;
+  world.stageEnemyShipsRemaining = 0;
   world.nextBossScore = 1000;
   world.activeBossIndex = 0;
   world.defeatedBossCount = 0;
   world.mineSpawnCount = 0;
   world.lastMineSpawnAt = 0;
-  world.lastOrbSpawnAt = 0;
+  world.lastEnemyShipSpawnAt = 0;
   world.score = 0;
   world.player.vx = 0;
   world.player.vy = 0;
@@ -1552,6 +1928,7 @@ function resetGameplayState() {
   world.player.x = world.width * 0.34;
   world.player.y = world.height * 0.5;
   pointer.down = false;
+  prepareNextStage();
   updateScoreDisplay();
 }
 
@@ -1727,6 +2104,7 @@ function tick(now) {
 
   renderBeams();
   renderProjectiles();
+  renderDebugHitboxes();
   renderParticles();
   renderBossCinematic();
   renderBossHealthBar();
@@ -1788,6 +2166,11 @@ function bindEvents() {
 
   launchButton.addEventListener("click", startLaunchSequence);
   menuButton.addEventListener("click", returnToIntro);
+  if (playtestHitboxesToggle) {
+    playtestHitboxesToggle.addEventListener("change", () => {
+      world.debugHitboxes = playtestHitboxesToggle.checked;
+    });
+  }
 }
 
 async function init() {
@@ -1803,6 +2186,7 @@ async function init() {
     enemySpawnerImage,
     partImages,
     weaponImages,
+    enemyShotImages,
     soundPools,
   } = await loadGameAssets();
 
@@ -1813,7 +2197,9 @@ async function init() {
   world.enemySpawnerImage = enemySpawnerImage;
   world.partImages = partImages;
   world.weaponImages = weaponImages;
+  world.enemyShotImages = enemyShotImages;
   world.soundPools = soundPools;
+  world.debugHitboxes = Boolean(playtestHitboxesToggle?.checked);
 
   buildShipPicker({
     container: introShipPicker,

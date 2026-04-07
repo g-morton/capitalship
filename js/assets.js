@@ -2,6 +2,7 @@ import {
   BOSS_FILES,
   ENEMY_FILES,
   ENEMY_EXPLODE_SOUNDS,
+  ENEMY_SHOT_FILES,
   getDefaultWeaponIdForHardpoint,
   getShipMaxHitPoints,
   getShipRepairRate,
@@ -211,7 +212,7 @@ async function loadSvgRecords(definitions) {
 }
 
 export async function loadGameAssets() {
-  const [ships, bosses, enemyShips, mineImage, sporeImage, enemySpawnerImage, partImages, weaponImages] = await Promise.all([
+  const [ships, bosses, enemyShips, mineImage, sporeImage, enemySpawnerImage, partImages, weaponImages, enemyShotImages] = await Promise.all([
     loadShips(),
     loadBosses(),
     loadEnemyShips(),
@@ -221,6 +222,9 @@ export async function loadGameAssets() {
     Promise.all(PART_FILES.map((path) => loadImageAsset(path))),
     Promise.all(
       Object.values(WEAPON_DEFS).map(async (weapon) => [weapon.id, await loadImageAsset(weapon.path)]),
+    ).then((entries) => Object.fromEntries(entries)),
+    Promise.all(
+      Object.entries(ENEMY_SHOT_FILES).map(async ([id, path]) => [id, await loadImageAsset(path)]),
     ).then((entries) => Object.fromEntries(entries)),
   ]);
 
@@ -253,6 +257,7 @@ export async function loadGameAssets() {
     enemySpawnerImage,
     partImages,
     weaponImages,
+    enemyShotImages,
     soundPools,
   };
 }
