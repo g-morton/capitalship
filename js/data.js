@@ -1,8 +1,35 @@
 export const SHIP_FILES = [
   {
+    id: "ship-0-millennium-falcon",
+    label: "Millennium Falcon",
+    scaleLevel: 1,
+    displayScale: 0.7,
+    stats: {
+      maxHitPoints: 110,
+      thrust: 660,
+      drag: 0.93,
+      repairRate: 1.5,
+    },
+    defaultLightWeaponId: "quadlaser",
+    path: "assets/images/ship-0-Millennium-Falcon.svg",
+    width: 241,
+    height: 65,
+    hardpoints: [
+      { type: "light", x: 100.5, y: 10.5 },
+      { type: "light", x: 100.5, y: 54.5 },
+    ],
+  },
+  {
     id: "ship-1-rocinante",
     label: "Rocinante",
     scaleLevel: 1,
+    displayScale: 1,
+    stats: {
+      maxHitPoints: 100,
+      thrust: 418,
+      drag: 0.922,
+      repairRate: 1.4,
+    },
     defaultLightWeaponId: "pd",
     path: "assets/images/ship-1-Rocinante.svg",
     width: 384,
@@ -19,7 +46,14 @@ export const SHIP_FILES = [
     id: "ship-2-gallimaufry",
     label: "Gallimaufry",
     scaleLevel: 2,
-    defaultLightWeaponId: "turbolaser",
+    displayScale: 1,
+    stats: {
+      maxHitPoints: 120,
+      thrust: 376,
+      drag: 0.904,
+      repairRate: 1.8,
+    },
+    defaultLightWeaponId: "quadlaser",
     path: "assets/images/ship-2-Gallimaufry.svg",
     width: 422,
     height: 112,
@@ -35,6 +69,13 @@ export const SHIP_FILES = [
     id: "ship-3-yamato",
     label: "Yamato",
     scaleLevel: 3,
+    displayScale: 1,
+    stats: {
+      maxHitPoints: 250,
+      thrust: 334,
+      drag: 0.886,
+      repairRate: 2.2,
+    },
     defaultLightWeaponId: "snubcannon",
     path: "assets/images/ship-3-Yamato.svg",
     width: 625,
@@ -52,6 +93,13 @@ export const SHIP_FILES = [
     id: "ship-4-galactica",
     label: "Galactica",
     scaleLevel: 4,
+    displayScale: 1,
+    stats: {
+      maxHitPoints: 300,
+      thrust: 250,
+      drag: 0.868,
+      repairRate: 2.7,
+    },
     defaultLightWeaponId: "flakcannon",
     path: "assets/images/ship-4-Galactica.svg",
     width: 723,
@@ -72,7 +120,14 @@ export const SHIP_FILES = [
     id: "ship-5-stardestroyer",
     label: "Star Destroyer",
     scaleLevel: 5,
-    defaultLightWeaponId: "turbolaser",
+    displayScale: 1,
+    stats: {
+      maxHitPoints: 350,
+      thrust: 200,
+      drag: 0.85,
+      repairRate: 3.2,
+    },
+    defaultLightWeaponId: "heavyturbolaser",
     path: "assets/images/ship-5-StarDestroyer.svg",
     width: 836,
     height: 306,
@@ -90,14 +145,6 @@ export const SHIP_FILES = [
     ],
   },
 ];
-
-export const SHIP_SCALE_STATS = {
-  1: { maxHitPoints: 92, thrust: 418, drag: 0.922, repairRate: 1.4 },
-  2: { maxHitPoints: 114, thrust: 376, drag: 0.904, repairRate: 1.8 },
-  3: { maxHitPoints: 136, thrust: 334, drag: 0.886, repairRate: 2.2 },
-  4: { maxHitPoints: 158, thrust: 292, drag: 0.868, repairRate: 2.7 },
-  5: { maxHitPoints: 180, thrust: 250, drag: 0.85, repairRate: 3.2 },
-};
 
 export const BOSS_FILES = [
   {
@@ -222,19 +269,40 @@ export const WEAPON_DEFS = {
     aimMode: "mouse",
     fireMode: "projectile",
   },
-  turbolaser: {
-    id: "turbolaser",
-    label: "Turbolaser",
-    path: "assets/images/weapon-small-turbolaser.svg",
-    soundPath: "assets/sounds/weapon-small-turbolaser.wav",
+  quadlaser: {
+    id: "quadlaser",
+    label: "Quad Laser",
+    path: "assets/images/weapon-small-quadlaser.svg",
+    soundPath: "assets/sounds/weapon-small-quadlaser.wav",
     mountType: "light",
     damage: 2.0,
     projectileSpeed: 980,
-    projectileLife: 0.4,
+    projectileLife: 0.5,
     projectileRadius: 1,
+    lineLength: 25,
     projectileColor: "#ffffff",
     turretSize: 30,
     cooldown: 95,
+    burstCount: 1,
+    burstSpacing: 0,
+    burstPause: 0,
+    aimMode: "mouse",
+    fireMode: "line-projectile",
+  },
+  heavyturbolaser: {
+    id: "heavyturbolaser",
+    label: "Heavy Turbolaser",
+    path: "assets/images/weapon-small-heavyturbolaser.svg",
+    soundPath: "assets/sounds/weapon-small-heavyturbolaser.wav",
+    mountType: "light",
+    damage: 5,
+    projectileSpeed: 660,
+    projectileLife: 0.95,
+    projectileRadius: 1.4,
+    lineLength: 56,
+    projectileColor: "#ffffff",
+    turretSize: 35,
+    cooldown: 860,
     burstCount: 1,
     burstSpacing: 0,
     burstPause: 0,
@@ -413,12 +481,19 @@ export const MINE_COLLISION_DAMAGE = 50;
 export const SPORE_HIT_POINTS = 30;
 export const SPORE_COLLISION_DAMAGE = 30;
 
+const DEFAULT_SHIP_STATS = {
+  maxHitPoints: 250,
+  thrust: 334,
+  drag: 0.886,
+  repairRate: 2.2,
+};
+
 export function getShipStats(ship) {
   if (!ship) {
-    return SHIP_SCALE_STATS[3];
+    return DEFAULT_SHIP_STATS;
   }
 
-  return SHIP_SCALE_STATS[ship.scaleLevel] || SHIP_SCALE_STATS[3];
+  return ship.stats || DEFAULT_SHIP_STATS;
 }
 
 export function getShipMaxHitPoints(ship) {
@@ -445,8 +520,14 @@ export function getWeaponDef(weaponId) {
   return WEAPON_DEFS[weaponId] || null;
 }
 
-export function getDroppableWeapons() {
-  return Object.values(WEAPON_DEFS).filter((weapon) => weapon.id !== "pd");
+export function getDroppableWeapons(ship = null) {
+  const droppableWeapons = Object.values(WEAPON_DEFS).filter((weapon) => weapon.id !== "pd");
+  if (!ship) {
+    return droppableWeapons;
+  }
+
+  const supportedMountTypes = new Set((ship.hardpoints || []).map((hardpoint) => hardpoint.type));
+  return droppableWeapons.filter((weapon) => supportedMountTypes.has(weapon.mountType));
 }
 
 export function getLightWeapons() {

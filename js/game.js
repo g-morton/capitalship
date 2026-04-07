@@ -122,11 +122,15 @@ function seedStars() {
 }
 
 function getShipScale(ship) {
-  return getBaseShipScale(ship) * getPlayerScaleMultiplier();
+  return getBaseShipScale(ship) * getShipDisplayScale(ship) * getPlayerScaleMultiplier();
 }
 
 function getBaseShipScale(ship) {
   return Math.min(world.width * 0.5 / ship.width, world.height * 0.5 / ship.height);
+}
+
+function getShipDisplayScale(ship) {
+  return ship?.displayScale ?? 1;
 }
 
 function getPlayerScaleMultiplier() {
@@ -926,6 +930,7 @@ function spawnWeaponProjectile(mount, angle, weapon, options = {}) {
     life: weapon.projectileLife,
     damage: weapon.damage,
     radius: weapon.projectileRadius,
+    lineLength: weapon.lineLength || 0,
     color: weapon.projectileColor,
     trail: Boolean(weapon.rocketTrail),
     rotation: angle,
@@ -1029,7 +1034,11 @@ function destroyEnemy(enemy) {
 }
 
 function spawnWeaponDrop(x, y) {
-  const dropOptions = getDroppableWeapons();
+  const dropOptions = getDroppableWeapons(world.currentShip);
+  if (dropOptions.length === 0) {
+    return;
+  }
+
   const selected = dropOptions[Math.floor(Math.random() * dropOptions.length)];
   world.drops.push({
     x,
@@ -1321,11 +1330,18 @@ function renderProjectiles() {
       continue;
     }
 
-    if (projectile.weaponId === "turbolaser") {
+    if (projectile.fireMode === "line-projectile") {
+      const speed = Math.hypot(projectile.vx || 0, projectile.vy || 0) || 1;
+      const lineLength = Math.max(
+        projectile.lineLength || 0,
+        Math.hypot((projectile.x - (projectile.prevX ?? projectile.x)), (projectile.y - (projectile.prevY ?? projectile.y))),
+      );
+      const tailX = projectile.x - (projectile.vx / speed) * lineLength;
+      const tailY = projectile.y - (projectile.vy / speed) * lineLength;
       ctx.strokeStyle = projectile.color;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = Math.max(2, projectile.radius * 1.5);
       ctx.beginPath();
-      ctx.moveTo(projectile.prevX ?? projectile.x, projectile.prevY ?? projectile.y);
+      ctx.moveTo(tailX, tailY);
       ctx.lineTo(projectile.x, projectile.y);
       ctx.stroke();
       continue;
@@ -1585,7 +1601,7 @@ function renderLaunchSequence() {
 
   const progress = easeInOutCubic(getLaunchProgress());
   const ship = world.currentShip;
-  const baseScale = getBaseShipScale(ship);
+  const baseScale = getBaseShipScale(ship) * getShipDisplayScale(ship);
   const startScale = baseScale * 1.2;
   const finalScale = baseScale * 0.8;
   const scale = startScale + (finalScale - startScale) * progress;
