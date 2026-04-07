@@ -1556,7 +1556,7 @@ function resetGameplayState() {
 }
 
 function updateScoreDisplay() {
-  scoreDisplay.textContent = `Score ${world.score}`;
+  scoreDisplay.textContent = `${world.score}`;
 }
 
 function startLaunchSequence() {
