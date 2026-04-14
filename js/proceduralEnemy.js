@@ -70,6 +70,45 @@ function buildStageHardpoints(width, height, stage, maxCount = 4) {
   return points.sort((a, b) => b.x - a.x);
 }
 
+function buildHardpointsFromParts(parts, width, height, stage, maxCount = 4) {
+  if (!parts?.length) {
+    return buildStageHardpoints(width, height, stage, maxCount);
+  }
+
+  const count = Math.max(1, Math.min(maxCount, 1 + Math.floor(stage * 0.45)));
+  const sampledParts = [...parts]
+    .sort((a, b) => b.x - a.x)
+    .slice(0, Math.max(count + 1, Math.ceil(parts.length * 0.4)));
+
+  const occupied = sampledParts.map((part) => ({
+    cx: width * 0.5 + part.x,
+    cy: height * 0.5 + part.y,
+    radius: 8 + part.scale * 18,
+  }));
+
+  const minX = Math.max(14, Math.min(...occupied.map((node) => node.cx - node.radius)));
+  const maxX = Math.min(width - 14, Math.max(...occupied.map((node) => node.cx + node.radius)));
+  const minY = Math.max(12, Math.min(...occupied.map((node) => node.cy - node.radius)));
+  const maxY = Math.min(height - 12, Math.max(...occupied.map((node) => node.cy + node.radius)));
+
+  const hardpoints = [];
+  for (let i = 0; i < count; i += 1) {
+    const part = sampledParts[i % sampledParts.length];
+    const jitterX = randRange(-5, 6);
+    const jitterY = randRange(-5, 5);
+    const px = width * 0.5 + part.x + jitterX;
+    const py = height * 0.5 + part.y + jitterY;
+
+    hardpoints.push({
+      type: "light",
+      x: clamp(px, minX, maxX),
+      y: clamp(py, minY, maxY),
+    });
+  }
+
+  return hardpoints.sort((a, b) => b.x - a.x);
+}
+
 function buildCompositeEnemyParts(enemyPartImages, stage, maxHardpoints = 4) {
   const partCount = Math.round(clamp(2 + stage * 0.22 + randRange(0, 1.8), 2, 6));
   const width = Math.round(clamp(195 + stage * 26 + randRange(-16, 26), 180, 440));
@@ -117,7 +156,7 @@ function buildCompositeEnemyParts(enemyPartImages, stage, maxHardpoints = 4) {
     }
   }
 
-  const hardpoints = buildStageHardpoints(width, height, stage, maxHardpoints);
+  const hardpoints = buildHardpointsFromParts(parts, width, height, stage, maxHardpoints);
 
   return { parts, hardpoints, width, height };
 }
