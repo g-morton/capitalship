@@ -42,7 +42,7 @@ export function emitSparks(world, x, y, count) {
   }
 }
 
-export function emitExplosion(world, x, y) {
+export function emitExplosion(world, x, y, options = {}) {
   for (let i = 0; i < 28; i += 1) {
     const angle = Math.random() * Math.PI * 2;
     const speed = 45 + Math.random() * 220;
@@ -63,6 +63,7 @@ export function emitExplosion(world, x, y) {
     minSpeed: 50,
     maxSpeed: 140,
     spread: Math.PI * 1.7,
+    ...options.partOptions,
   });
 }
 
@@ -87,22 +88,25 @@ export function emitDebris(world, x, y, count) {
 }
 
 export function emitShipParts(world, x, y, count, options = {}) {
-  const partPoolSize = Math.max(1, world.partImages?.length || 10);
+  const partPoolSize = Math.max(1, options.partImages?.length || world.partImages?.length || 10);
   const direction = options.direction ?? -Math.PI;
   const spread = options.spread ?? Math.PI * 1.1;
+  const partKind = options.partKind || "part";
+  const minSize = options.minSize || 16;
+  const maxSize = options.maxSize || 28;
 
   for (let i = 0; i < count; i += 1) {
     const angle = direction + (Math.random() - 0.5) * spread;
     const speed = (options.minSpeed || 55) + Math.random() * (options.maxSpeed || 150);
     world.particles.push({
-      kind: "part",
+      kind: partKind,
       x,
       y,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
       life: 0.75 + Math.random() * 1.4,
       maxLife: 2.2,
-      size: 16 + Math.random() * 12,
+      size: minSize + Math.random() * Math.max(0, maxSize - minSize),
       rotation: Math.random() * Math.PI * 2,
       rotationSpeed: (Math.random() - 0.5) * 7.5,
       partIndex: Math.floor(Math.random() * partPoolSize),
@@ -156,6 +160,8 @@ function applyExplosionDamage({ world, x, y, radius, damage, onEnemyDestroyed })
       emitShipParts(world, enemy.x, enemy.y, Math.max(1, Math.round(impactDamage / 10)), {
         minSpeed: 40,
         maxSpeed: 110,
+        partKind: "enemy-part",
+        partImages: world.enemyPartImages,
       });
     }
     playRandomSound(world, HIT_BIG_SOUNDS, { volume: 0.28 });
@@ -191,6 +197,8 @@ export function applyBeamDamage({ world, beam, damage, onEnemyDestroyed }) {
       emitShipParts(world, hitCircle.x, hitCircle.y, Math.max(1, Math.round(damage / 12)), {
         minSpeed: 35,
         maxSpeed: 95,
+        partKind: "enemy-part",
+        partImages: world.enemyPartImages,
       });
     }
     playRandomSound(world, beam.width >= 10 ? HIT_BIG_SOUNDS : HIT_SMALL_SOUNDS, {
@@ -253,7 +261,14 @@ export function handleProjectileHits({ world, onEnemyDestroyed }) {
         damage: projectile.damage,
         onEnemyDestroyed,
       });
-      emitExplosion(world, projectile.x, projectile.y);
+      emitExplosion(world, projectile.x, projectile.y, hitEnemy?.type === "boss"
+        ? {
+          partOptions: {
+            partKind: "enemy-part",
+            partImages: world.enemyPartImages,
+          },
+        }
+        : undefined);
       playRandomSound(world, HIT_BIG_SOUNDS, { volume: 0.34 });
     } else {
       hitEnemy.hitPoints -= projectile.damage;
@@ -262,6 +277,8 @@ export function handleProjectileHits({ world, onEnemyDestroyed }) {
         emitShipParts(world, projectile.impactX ?? projectile.x, projectile.impactY ?? projectile.y, Math.max(1, Math.round(projectile.damage / 9)), {
           minSpeed: 40,
           maxSpeed: 105,
+          partKind: "enemy-part",
+          partImages: world.enemyPartImages,
         });
       }
       playRandomSound(world, projectile.damage >= 18 ? HIT_BIG_SOUNDS : HIT_SMALL_SOUNDS, {

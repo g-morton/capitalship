@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="668" height="193" viewBox="0 0 668 193">
+  <defs>
+    <clipPath id="clip-ship-4-Sulaco">
+      <rect width="668" height="193"/>
+    </clipPath>
+  </defs>
+  <g id="ship-4-Sulaco" clip-path="url(#clip-ship-4-Sulaco)">
+    <path id="Subtraction_53" data-name="Subtraction 53" d="M204.3,177.73H188.38l-2.441-33.346-5.89-11.062v-3.533H184.5V127.1h-4.456l4.456-10V105.225l-6.1-11.063-7.569.568a22.782,22.782,0,0,1-10.432,2.5,23.132,23.132,0,0,1-15.864-6.312l10.276,14.312H135.189V99.163h-3.876v3.344l-17.883,4.781H39.153v-2.344H30.3l7.538-5.625V97.444H22.368l-5.706-4.188V84.318H0V80.755H11.168l5.317-12.884L11.168,54.988H0V51.425H16.662V42.487L22.368,38.3H37.841V36.424L30.3,30.8h8.85V27.283h74.277L131.314,32.5l3.876,12.719h12.817V32.5h37.841L171.809,48.753v2.281h4.058V48.753l22.369-1.875v4.156L213.5,39.784,240.563,29.6h17.7l53.8,11.563h5.964l3.733-5.778-8.433-1.96V30.093l3.484-2.108h3.972l2.04-1.48h7.945l3.25,1.48h3.738l2.763-1.48v1.48H348v3.588h-5.67l1.7,1.849-8.56,1.96,3.817,5.778h8.18l3.265-4.594L408.5,23.033h91.062l10.986,2.594v2.282h3.235V25.626l8.544,2.282v3.344h2.868L520.922,0H532.3V33.533h3.266v1.688h6.1V37.1L578.9,49.784h-29.51l-13.823-3.75,4.058,5.844v1.656H608.81v2.313H575.241l-5.493,2.063L532.3,55.847v9.376h17.089l3.265-2.719h22.583l6.9,3.969h14.251l-4.669,5.812H564.439l-9.766-1.437h-2.014l-3.265,1.437h-9.765v8.563h9.765l5.28,2.688h15.075l3.449,3.969h11.6l12.817,3.344H569.748v2.906h36.8v5.22h-31.31l-2.044,3.531H557.542l-8.148-3.531h-3.052l-10.771,5.406,21.972,3.75,6.9-2.094h72.233l2.227-3.531h19.134l-3.662,3.531h-6.1v5.844H544.907l-6.9,2.282-10.8,13.126V110.225l-6.286,1.656-5.311,7.72v-4.188h-5.066v9.594h-24.23v3.938H466.785l-4.456-3.938H427.54l-21.972-14.157H402.3v2.5l-27.679,1.657H358.358l-10.894-6.063H329.886v-3.532H305.473l-4.089,3.532h13.641v6.063h-5.707l-10.162,5-5.28-3.563H280.236l2.441-7.5h8.544l-5.707-3.532v-2.281h-5.28l-9.979,5.813-8.941,11.063h-34.79l-4.272-2.094H208.533l4.093,9.188h-4.455v2.687h4.454v3.533l-5.889,11.062ZM128.662,79.172h0l-17.7,8.318,17.7,5.626,0-13.944ZM475.862,67.9v8.595h20.981V67.9H475.862Zm-29.374,0v8.595h20.981V67.9Zm-29.373,0v8.595h20.981V67.9h-20.98Zm-29.376,0v8.595h20.982V67.9Zm-29.373,0v8.595h20.981V67.9h-20.98Zm-29.376,0v8.595h20.982V67.9ZM128.661,41.355h0l-17.7,5.626,17.7,8.318V41.355Z" transform="translate(2.996 4)"/>
+    <g id="Rectangle_53" data-name="Rectangle 53" transform="translate(361 50)" fill="#fff" stroke="#000" stroke-width="3">
+      <rect width="12" height="12" stroke="none"/>
+      <rect x="-1.5" y="-1.5" width="15" height="15" fill="none"/>
+    </g>
+    <g id="Rectangle_84" data-name="Rectangle 84" transform="translate(523 92)" fill="#fff" stroke="#000" stroke-width="3">
+      <rect width="12" height="12" stroke="none"/>
+      <rect x="-1.5" y="-1.5" width="15" height="15" fill="none"/>
+    </g>
+    <g id="Rectangle_85" data-name="Rectangle 85" transform="translate(283 75)" fill="#fff" stroke="#000" stroke-width="3">
+      <rect width="12" height="12" stroke="none"/>
+      <rect x="-1.5" y="-1.5" width="15" height="15" fill="none"/>
+    </g>
+    <g id="Ellipse_48" data-name="Ellipse 48" transform="translate(325 32)" fill="#fff" stroke="#000" stroke-width="3">
+      <ellipse cx="7" cy="7.5" rx="7" ry="7.5" stroke="none"/>
+      <ellipse cx="7" cy="7.5" rx="8.5" ry="9" fill="none"/>
+    </g>
+    <g id="Ellipse_193" data-name="Ellipse 193" transform="translate(293 111)" fill="#fff" stroke="#000" stroke-width="3">
+      <ellipse cx="7" cy="7.5" rx="7" ry="7.5" stroke="none"/>
+      <ellipse cx="7" cy="7.5" rx="8.5" ry="9" fill="none"/>
+    </g>
+    <g id="Ellipse_194" data-name="Ellipse 194" transform="translate(215 111)" fill="#fff" stroke="#000" stroke-width="3">
+      <ellipse cx="7" cy="7.5" rx="7" ry="7.5" stroke="none"/>
+      <ellipse cx="7" cy="7.5" rx="8.5" ry="9" fill="none"/>
+    </g>
+    <g id="Ellipse_195" data-name="Ellipse 195" transform="translate(232 111)" fill="#fff" stroke="#000" stroke-width="3">
+      <ellipse cx="7" cy="7.5" rx="7" ry="7.5" stroke="none"/>
+      <ellipse cx="7" cy="7.5" rx="8.5" ry="9" fill="none"/>
+    </g>
+    <g id="Ellipse_196" data-name="Ellipse 196" transform="translate(249 111)" fill="#fff" stroke="#000" stroke-width="3">
+      <ellipse cx="7" cy="7.5" rx="7" ry="7.5" stroke="none"/>
+      <ellipse cx="7" cy="7.5" rx="8.5" ry="9" fill="none"/>
+    </g>
+  </g>
+</svg>

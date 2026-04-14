@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="174" height="116" viewBox="0 0 174 116">
+  <defs>
+    <clipPath id="clip-enemy-part-9">
+      <rect width="174" height="116"/>
+    </clipPath>
+  </defs>
+  <g id="enemy-part-9" clip-path="url(#clip-enemy-part-9)">
+    <path id="Path_510" data-name="Path 510" d="M1542.93-1175.294c-5.57,9.145,3.931,28.383,17.781,34.056s15.451,15.066,41.726,22.024,58.884-2.077,71.346-7.581" transform="translate(-1527 1202)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="12"/>
+    <path id="Path_511" data-name="Path 511" d="M1570.165-1201.744l-12.6,5.956,2.2,14.843,8.178,7.847,15.126-4.727v-10.337l-1.122-6.835-5.064,11.8-6.719-1.246-4.321-3.719v-6.173l11.7-5.528Z" transform="translate(-1370.33 1411.99) rotate(-8)"/>
+    <path id="Path_512" data-name="Path 512" d="M1570.474-1173.1l12.6-5.956-2.2-14.843-8.178-7.847-15.126,4.727v10.337l1.122,6.835,5.064-11.8,6.719,1.246,4.321,3.719v6.173l-11.7,5.528Z" transform="matrix(-0.695, -0.719, 0.719, -0.695, 2102.315, 376.321)"/>
+    <g id="Path_413" transform="matrix(0.545, 0.839, -0.839, 0.545, 55.709, 62.706)">
+      <path id="Path_423" data-name="Path 423" d="M12.527.017C18.989-.81,24.345,8.339,24.345,15.7S19.395,26.661,12.527,26.661A13.337,13.337,0,0,1-.514,13.414C-.514,6.056,6.066.844,12.527.017Z" transform="translate(0 0)"/>
+    </g>
+    <g id="Path_413-2" data-name="Path_413" transform="matrix(0.545, 0.839, -0.839, 0.545, 70.709, 75.562)">
+      <path id="Path_423-2" data-name="Path 423" d="M12.527.017C18.989-.81,24.345,8.339,24.345,15.7S19.395,26.661,12.527,26.661A13.337,13.337,0,0,1-.514,13.414C-.514,6.056,6.066.844,12.527.017Z" transform="translate(0 0)"/>
+    </g>
+    <g id="Path_413-3" data-name="Path_413" transform="translate(92.467 75.27) rotate(-29)">
+      <path id="Path_423-3" data-name="Path 423" d="M3.716-.013c2.1-.361,3.833,3.633,3.833,6.845s-1.606,4.787-3.833,4.787S-.514,9.049-.514,5.836,1.62.349,3.716-.013Z" transform="translate(0 0)"/>
+    </g>
+    <g id="Path_413-4" data-name="Path_413" transform="translate(100.169 73.27) rotate(-29)">
+      <path id="Path_423-4" data-name="Path 423" d="M3.716-.013c2.1-.361,3.833,3.633,3.833,6.845s-1.606,4.787-3.833,4.787S-.514,9.049-.514,5.836,1.62.349,3.716-.013Z" transform="translate(0 0)"/>
+    </g>
+    <g id="Path_413-5" data-name="Path_413" transform="translate(108.169 74.902) rotate(-29)">
+      <path id="Path_423-5" data-name="Path 423" d="M3.716-.013c2.1-.361,3.833,3.633,3.833,6.845s-1.606,4.787-3.833,4.787S-.514,9.049-.514,5.836,1.62.349,3.716-.013Z" transform="translate(0 0)"/>
+    </g>
+    <g id="Path_413-6" data-name="Path_413" transform="translate(75.377 80.603) rotate(12)">
+      <path id="Path_423-6" data-name="Path 423" d="M11.076,0c5.742-.5,10.5,5.062,10.5,9.538s-4.4,6.671-10.5,6.671S-.514,12.623-.514,8.147,5.334.5,11.076,0Z" transform="translate(0 0)"/>
+    </g>
+    <path id="Path_361" data-name="Path 361" d="M291.409,262.563c10.192,3.4,11.352,23.889,19.992,26.769,11.957,3.986,10.693,5.918,25.486,18.2L336.476,310" transform="translate(-263.114 -199.063)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5" stroke-width="2" fill-rule="evenodd"/>
+  </g>
+</svg>

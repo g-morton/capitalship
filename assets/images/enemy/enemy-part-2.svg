@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="196" height="206" viewBox="0 0 196 206">
+  <defs>
+    <clipPath id="clip-enemy-part-2">
+      <rect width="196" height="206"/>
+    </clipPath>
+  </defs>
+  <g id="enemy-part-2" clip-path="url(#clip-enemy-part-2)">
+    <g id="Group_53" data-name="Group 53" transform="translate(-142.402 -104)">
+      <path id="Path_379" data-name="Path 379" d="M201.671,229.11C199.8,240.353,176,254.716,175.153,264.879c-.154,1.845-14.894,20.012-15.726,22.51" transform="translate(-1.731 -26.321)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5" stroke-width="8" fill-rule="evenodd"/>
+      <path id="Path_380" data-name="Path 380" d="M272.285,222.017c.852,5.109,1.909,5.706,2.776,8.018,6.932,18.487,16.743,20.306,42.244,38.853,7.4,5.378,8.958.778,17.268,4.933" transform="translate(-22.772 -5.354)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5" stroke-width="8" fill-rule="evenodd"/>
+      <path id="Path_390" data-name="Path 390" d="M234.357,225.409c-13.385,1.673-44.741,30.388-62.9,39.47-4.169,2.085-8.708,1-12.642,4.934" transform="translate(-1.731 -26.321)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5" stroke-width="4" fill-rule="evenodd"/>
+      <path id="Path_391" data-name="Path 391" d="M251.009,227.259c.961,1.443,9.081,27.1,29.294,31.144,15.447,3.09,15.5,2.019,31.144,4.626" transform="translate(-22.772 -5.354)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5" stroke-width="4" fill-rule="evenodd"/>
+      <path id="Path_397" data-name="Path 397" d="M221.1,231.576c27.416,27.416,52.137,39.3,53.654,38.545.991-.495,25.535-23.693,29.6-41.32" transform="translate(-22.772 -5.354)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5" stroke-width="2" fill-rule="evenodd"/>
+      <path id="Path_398" data-name="Path 398" d="M256.559,234.66c-1.269.846-11.967,18.248,15.726,10.792,18.4-4.954,32.115-18.98,31.144-21.893" transform="translate(-22.772 -5.354)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5" stroke-width="2" fill-rule="evenodd"/>
+      <path id="Path_399" data-name="Path 399" d="M199.821,236.51c45.355,35.717,61.278,34.883,81.969,26.21,2.643-1.107,20.529-8.6,34.979,2.776" transform="translate(-4.969 -26.321)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5" stroke-width="2" fill-rule="evenodd"/>
+      <path id="Path_400" data-name="Path 400" d="M345.366,217.084c-15.323,17.621-11.2,21.169-28.677,35.152" transform="translate(-22.772 -5.354)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5" stroke-width="2" fill-rule="evenodd"/>
+    </g>
+    <path id="Path_497" data-name="Path 497" d="M544.993,195.1c8.873,6.535,23.667,21.351,36.052,24.546s19.444,5.352,31.03,8.548,17.312.559,26.635,0,47.678-12.084,43.683-23.348.4-42.239-12.986-48.07-62.99-24.876-82.543-20.07" transform="translate(-501.359 -100.972)"/>
+  </g>
+</svg>

@@ -2,6 +2,7 @@ import {
   BOSS_FILES,
   ENEMY_FILES,
   ENEMY_EXPLODE_SOUNDS,
+  ENEMY_PART_FILES,
   ENEMY_SHOT_FILES,
   getDefaultWeaponIdForHardpoint,
   getShipMaxHitPoints,
@@ -123,6 +124,7 @@ async function buildSvgFromFallback(definition) {
 
 export function createWeaponMounts(ship) {
   ship.lastReplacementByType = {};
+  ship.phaserBank = null;
   return ship.hardpoints.map((hardpoint) => ({
     hardpoint,
     weaponId: getDefaultWeaponIdForHardpoint(ship, hardpoint.type),
@@ -178,6 +180,32 @@ export function loadImageAsset(path) {
   });
 }
 
+async function loadOptionalImageAsset(path) {
+  try {
+    const image = await loadImageAsset(path);
+    return {
+      id: path.split("/").pop()?.replace(".svg", "") || path,
+      path,
+      image,
+      width: image.naturalWidth || 100,
+      height: image.naturalHeight || 100,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function loadFirstAvailableImage(paths) {
+  for (const path of paths) {
+    try {
+      return await loadImageAsset(path);
+    } catch {
+      // try next fallback
+    }
+  }
+  throw new Error(`Failed to load image from any path: ${paths.join(", ")}`);
+}
+
 export async function loadShips() {
   return loadSvgRecords(SHIP_FILES);
 }
@@ -212,19 +240,30 @@ async function loadSvgRecords(definitions) {
 }
 
 export async function loadGameAssets() {
-  const [ships, bosses, enemyShips, mineImage, sporeImage, enemySpawnerImage, partImages, weaponImages, enemyShotImages] = await Promise.all([
+  const projectileSpriteDefs = Object.values(WEAPON_DEFS)
+    .filter((weapon) => weapon.projectileSpritePath)
+    .map((weapon) => ({
+      id: weapon.projectileSpriteId || weapon.id,
+      path: weapon.projectileSpritePath,
+    }));
+
+  const [ships, bosses, enemyShips, mineImage, sporeImage, enemySpawnerImage, partImages, enemyPartImages, weaponImages, enemyShotImages, projectileSpriteImages] = await Promise.all([
     loadShips(),
     loadBosses(),
     loadEnemyShips(),
     loadImageAsset(MINE_FILE),
     loadImageAsset(SPORE_FILE),
-    loadImageAsset("assets/images/weapon-enemy-spawner.svg"),
+    loadFirstAvailableImage(["assets/images/enemy/enemy-emitter.svg", "assets/images/weapon-enemy-spawner.svg"]),
     Promise.all(PART_FILES.map((path) => loadImageAsset(path))),
+    Promise.all(ENEMY_PART_FILES.map((path) => loadOptionalImageAsset(path))).then((records) => records.filter(Boolean)),
     Promise.all(
       Object.values(WEAPON_DEFS).map(async (weapon) => [weapon.id, await loadImageAsset(weapon.path)]),
     ).then((entries) => Object.fromEntries(entries)),
     Promise.all(
       Object.entries(ENEMY_SHOT_FILES).map(async ([id, path]) => [id, await loadImageAsset(path)]),
+    ).then((entries) => Object.fromEntries(entries)),
+    Promise.all(
+      projectileSpriteDefs.map(async ({ id, path }) => [id, await loadImageAsset(path)]),
     ).then((entries) => Object.fromEntries(entries)),
   ]);
 
@@ -256,8 +295,10 @@ export async function loadGameAssets() {
     sporeImage,
     enemySpawnerImage,
     partImages,
+    enemyPartImages,
     weaponImages,
     enemyShotImages,
+    projectileSpriteImages,
     soundPools,
   };
 }

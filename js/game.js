@@ -14,6 +14,8 @@ import {
 } from "./data.js";
 import { playRandomSound, playSound, warmSoundPools } from "./audio.js";
 import { buildShipPicker, createWeaponMounts, loadGameAssets } from "./assets.js";
+import { buildProceduralBossRecord } from "./proceduralBoss.js";
+import { buildProceduralEnemyArchetype } from "./proceduralEnemy.js";
 import {
   applyBeamDamage,
   damagePlayer as applyPlayerDamage,
@@ -24,7 +26,6 @@ import {
   handleEnemyProjectileHits,
   handleProjectileHits,
   handleShipCollisions as resolveShipCollisions,
-  triggerPlayerDeathEffects,
 } from "./combat.js";
 
 const canvas = document.getElementById("game-canvas");
@@ -33,6 +34,7 @@ const introScreen = document.getElementById("intro-screen");
 const introShipPicker = document.getElementById("intro-ship-picker");
 const launchButton = document.getElementById("launch-button");
 const menuButton = document.getElementById("menu-button");
+const skipBossButton = document.getElementById("skip-boss-button");
 const scoreDisplay = document.getElementById("score-display");
 const playtestHitboxesToggle = document.getElementById("playtest-hitboxes");
 
@@ -56,11 +58,16 @@ const world = {
   },
   projectiles: [],
   beams: [],
+  wardens: [],
   enemies: [],
+  wrecks: [],
   particles: [],
   drops: [],
   bosses: [],
   enemyShips: [],
+  enemyPartImages: [],
+  enemyPartBlackImages: [],
+  projectileSpriteImages: {},
   activeBossIndex: 0,
   defeatedBossCount: 0,
   stageIndex: 0,
@@ -68,6 +75,10 @@ const world = {
   stageHazardType: "mine",
   stageHazardsRemaining: 0,
   stageEnemyShipsRemaining: 0,
+  stageEnemyArchetype: null,
+  stageMidLargeArchetype: null,
+  stageMidLargeSpawned: false,
+  stageEnemySpawnCount: 0,
   bossEncounter: null,
   nextBossScore: 1000,
   mineSpawnCount: 0,
@@ -79,6 +90,7 @@ const world = {
   transitionDuration: 2600,
   deathStartedAt: 0,
   deathDuration: 2200,
+  playerWreckExited: false,
   audioEnabled: false,
   lastFrame: performance.now(),
   audioWarmed: false,
@@ -88,9 +100,32 @@ const world = {
 
 const MAX_ACTIVE_SPORES = 6;
 const MAX_ACTIVE_ENEMY_SHIPS = 2;
+const WARDEN_PD_WEAPON = {
+  id: "warden-pd",
+  fireMode: "projectile",
+  projectileSpeed: 680,
+  projectileLife: 1.0,
+  projectileRadius: 1.2,
+  projectileColor: "#ffffff",
+  damage: 3,
+};
+const WARDEN_LASER_WEAPON = {
+  id: "warden-laser",
+  fireMode: "line-projectile",
+  projectileSpeed: 910,
+  projectileLife: 0.48,
+  projectileRadius: 1.4,
+  projectileColor: "#ffffff",
+  lineLength: 18,
+  damage: 4.5,
+};
+
+function randomDepthScale(min = 0.88, max = 1.14) {
+  return min + Math.random() * (max - min);
+}
 
 function getEnemyShipSpawnCap() {
-  return world.defeatedBossCount >= 2 ? 2 : 1;
+  return Math.min(5, 2 + Math.floor(world.stageIndex * 0.45));
 }
 
 function getActiveEnemyShipCount() {
@@ -101,21 +136,30 @@ function getActiveStageHazardCount() {
   return world.enemies.filter((enemy) => enemy.stageHazard && enemy.hitPoints > 0 && (enemy.life === undefined || enemy.life > 0)).length;
 }
 
-function chooseEnemyShipRecord() {
+function chooseMinorEnemyShipRecord() {
   const records = world.enemyShips || [];
   if (!records.length) {
     return null;
   }
 
-  const enemyWaveId = world.stageIndex === 0
-    ? "enemy-orb-light"
-    : world.stageIndex === 1
-      ? "enemy-orb-heavy"
-      : "enemy-dart";
+  const stage = Math.max(0, world.stageIndex);
+  const weights = records.map((record) => {
+    if (record.id === "enemy-dart") {
+      return { record, weight: Math.max(0.25, stage * 0.25) };
+    }
+    if (record.id === "enemy-orb-heavy") {
+      return { record, weight: 0.85 + stage * 0.17 };
+    }
+    return { record, weight: 1.35 - Math.min(stage * 0.09, 0.6) };
+  });
 
-  const matchingRecord = records.find((record) => record.id === enemyWaveId);
-  if (matchingRecord) {
-    return matchingRecord;
+  const totalWeight = weights.reduce((sum, item) => sum + item.weight, 0);
+  let roll = Math.random() * totalWeight;
+  for (const item of weights) {
+    roll -= item.weight;
+    if (roll <= 0) {
+      return item.record;
+    }
   }
 
   return records[0];
@@ -132,13 +176,28 @@ function getStageHazardCount() {
 }
 
 function getStageEnemyShipCount() {
-  return world.stageIndex >= 2 ? 3 : 2;
+  return 4 + Math.min(10, world.stageIndex * 2);
 }
 
 function prepareNextStage() {
   world.stageHazardType = getStageHazardType();
   world.stageHazardsRemaining = getStageHazardCount();
   world.stageEnemyShipsRemaining = getStageEnemyShipCount();
+  world.stageEnemySpawnCount = 0;
+  world.stageEnemyArchetype = buildProceduralEnemyArchetype({
+    stageIndex: world.stageIndex,
+    enemyShips: world.enemyShips || [],
+    enemyWeaponIds: Object.keys(world.enemyShotImages || {}),
+    enemyPartImages: world.enemyPartImages || [],
+  });
+  world.stageMidLargeArchetype = buildProceduralEnemyArchetype({
+    stageIndex: world.stageIndex,
+    enemyShips: world.enemyShips || [],
+    enemyWeaponIds: Object.keys(world.enemyShotImages || {}),
+    enemyPartImages: world.enemyPartImages || [],
+    sizeClass: "mid-large",
+  });
+  world.stageMidLargeSpawned = false;
   world.stagePhase = "hazard";
   world.lastMineSpawnAt = 0;
   world.lastEnemyShipSpawnAt = 0;
@@ -310,7 +369,7 @@ function updateEnemies(deltaSeconds) {
   const now = performance.now();
   if (!shouldPauseMineSpawns()) {
     if (shouldSpawnBossPreviewSupport() && now - world.lastEnemyShipSpawnAt > 2600) {
-      spawnEnemyShip();
+      spawnEnemyShip({ variant: "minor" });
       world.lastEnemyShipSpawnAt = now;
     }
 
@@ -319,9 +378,18 @@ function updateEnemies(deltaSeconds) {
       world.lastMineSpawnAt = now;
     }
 
-    if (world.stagePhase === "ships" && shouldSpawnEnemyShips() && now - world.lastEnemyShipSpawnAt > 3400) {
-      spawnEnemyShip();
+    if (world.stagePhase === "ships" && shouldSpawnEnemyShips() && now - world.lastEnemyShipSpawnAt > 1900) {
+      let variant = "minor";
+      if (!world.stageMidLargeSpawned && world.stageMidLargeArchetype) {
+        variant = "mid-large";
+        world.stageMidLargeSpawned = true;
+      } else if (world.stageEnemyArchetype) {
+        variant = (world.stageEnemySpawnCount % 4 === 3) ? "minor" : "backbone";
+      }
+
+      spawnEnemyShip({ variant });
       world.stageEnemyShipsRemaining = Math.max(0, world.stageEnemyShipsRemaining - 1);
+      world.stageEnemySpawnCount += 1;
       world.lastEnemyShipSpawnAt = now;
     }
   }
@@ -483,8 +551,29 @@ function updateStageProgression() {
   }
 }
 
+function getBossRecordForStage() {
+  const enemyWeaponIds = Object.keys(world.enemyShotImages || {});
+  const procedural = buildProceduralBossRecord({
+    stageIndex: world.stageIndex,
+    enemyPartImages: world.enemyPartImages || [],
+    enemyWeaponIds,
+  });
+  if (procedural) {
+    return procedural;
+  }
+
+  if (world.bosses?.length) {
+    return world.bosses[world.activeBossIndex % world.bosses.length];
+  }
+
+  return null;
+}
+
 function startBossEncounter() {
-  const bossRecord = world.bosses[world.activeBossIndex % world.bosses.length];
+  const bossRecord = getBossRecordForStage();
+  if (!bossRecord) {
+    return;
+  }
   world.activeBossIndex += 1;
   world.nextBossScore += 1000;
 
@@ -505,9 +594,25 @@ function startBossEncounter() {
   };
 }
 
+function skipToBossEncounter() {
+  if (world.scene !== "running" || world.bossEncounter) {
+    return;
+  }
+
+  world.stageHazardsRemaining = 0;
+  world.stageEnemyShipsRemaining = 0;
+  world.stagePhase = "boss";
+  world.lastMineSpawnAt = performance.now();
+  world.lastEnemyShipSpawnAt = performance.now();
+  world.enemies = world.enemies.filter((enemy) => enemy.type === "boss");
+  world.projectiles = world.projectiles.filter((projectile) => !projectile.isEnemy);
+
+  startBossEncounter();
+}
+
 function spawnBossEnemy(bossRecord) {
   const playerMax = world.currentShip ? getShipMaxHitPoints(world.currentShip) : 100;
-  const intendedSpawnCount = bossRecord.sporeSpawnCount || 3;
+  const intendedSpawnCount = Math.max(0, bossRecord.sporeSpawnCount ?? 3);
   const fallbackSpawnPoints = Array.from({ length: intendedSpawnCount }, (_, index) => {
     const t = intendedSpawnCount === 1 ? 0.5 : index / (intendedSpawnCount - 1);
     return {
@@ -518,12 +623,24 @@ function spawnBossEnemy(bossRecord) {
   });
   const parsedSpawnPoints = (bossRecord.hardpoints || []).filter((point) => point.type === "light");
   const activeSpawnPoints = parsedSpawnPoints.slice(0, intendedSpawnCount);
-  const firingPoints = activeSpawnPoints.length ? activeSpawnPoints : fallbackSpawnPoints;
+  const fallbackWeaponMounts = (activeSpawnPoints.length ? activeSpawnPoints : fallbackSpawnPoints).map((hardpoint) => ({
+    hardpoint,
+    weaponId: "enemy-shot-3",
+  }));
+  const configuredWeaponMounts = bossRecord.weaponMounts?.length ? bossRecord.weaponMounts : fallbackWeaponMounts;
+  const stageScale = 1 + world.stageIndex * 0.16;
+  const maxHitPoints = Math.max(
+    1200,
+    playerMax * 8.5 * (bossRecord.maxHitPointsScale || 1) * (1 + world.stageIndex * 0.06),
+  );
+  const scoreValue = Math.round(650 * stageScale * (bossRecord.scoreValueScale || 1));
+  const sporeSpawnPoints = bossRecord.sporePoints?.length ? bossRecord.sporePoints : activeSpawnPoints;
   const boss = {
     type: "boss",
     bossId: bossRecord.id,
     label: bossRecord.label,
     image: bossRecord.image,
+    parts: bossRecord.parts || null,
     width: bossRecord.width,
     height: bossRecord.height,
     hitCircleDefs: bossRecord.hitCircles || [],
@@ -533,28 +650,30 @@ function spawnBossEnemy(bossRecord) {
     targetY: world.height * 0.46,
     entryTargetX: world.width * 0.77,
     floatTime: Math.random() * Math.PI * 2,
-    hitPoints: Math.max(playerMax * 10, 1200),
-    maxHitPoints: Math.max(playerMax * 10, 1200),
+    hitPoints: maxHitPoints,
+    maxHitPoints,
     radius: Math.max(
       bossRecord.width * Math.min(world.width * 0.46 / bossRecord.width, world.height * 0.56 / bossRecord.height),
       bossRecord.height * Math.min(world.width * 0.46 / bossRecord.width, world.height * 0.56 / bossRecord.height),
     ) * 0.32,
-    scoreValue: 650,
-    sporeSpawnPoints: activeSpawnPoints,
+    scoreValue,
+    sporeSpawnPoints,
     fallbackSpawnPoints,
-    weaponMounts: firingPoints.map((hardpoint) => ({
-      hardpoint,
-      weaponId: "enemy-shot-3",
+    emitsSpores: bossRecord.emitsSpores ?? intendedSpawnCount > 0,
+    weaponMounts: configuredWeaponMounts.map((mount) => ({
+      hardpoint: mount.hardpoint,
+      weaponId: mount.weaponId || "enemy-shot-3",
       cooldownUntil: performance.now() + 500 + Math.random() * 900,
       angle: Math.PI,
     })),
-    bossProjectileDamageScale: 0.62,
-    bossProjectileSpeedScale: 0.88,
-    bossProjectileCooldownScale: 1.95,
+    bossProjectileDamageScale: bossRecord.projectileDamageScale ?? 0.62,
+    bossProjectileSpeedScale: bossRecord.projectileSpeedScale ?? 0.88,
+    bossProjectileCooldownScale: bossRecord.projectileCooldownScale ?? 1.95,
     nextVolleyIndex: 0,
     nextBossVolleyAt: performance.now() + 1200,
     lastSporeAt: performance.now(),
-    sporeCooldown: 6400,
+    sporeCooldown: bossRecord.sporeCooldown ?? 6400,
+    sporeClusterSize: bossRecord.sporeClusterSize ?? 1,
   };
   boss.hitCircles = getBossHitCircles(boss);
 
@@ -631,6 +750,20 @@ function getBossSpawnerPoints(enemy) {
   return enemy.sporeSpawnPoints?.length ? enemy.sporeSpawnPoints : enemy.fallbackSpawnPoints;
 }
 
+function getBossEmitterPoints(enemy) {
+  const weaponPoints = (enemy.weaponMounts || []).map((mount) => mount.hardpoint).filter(Boolean);
+  const sporePoints = getBossSpawnerPoints(enemy) || [];
+  const combined = [...weaponPoints, ...sporePoints];
+  const unique = [];
+  for (const point of combined) {
+    const exists = unique.some((candidate) => Math.hypot(candidate.x - point.x, candidate.y - point.y) < 4);
+    if (!exists) {
+      unique.push(point);
+    }
+  }
+  return unique;
+}
+
 function getActiveSporeCount(sourceBossId = null) {
   return world.enemies.filter((enemy) => enemy.type === "spore" && (sourceBossId ? enemy.sourceBossId === sourceBossId : true)).length;
 }
@@ -655,6 +788,10 @@ function getBossSporeLaunchAngle(enemy, spawnIndex, spawnCount, burstOffset) {
 }
 
 function updateBossSporeSpawns(enemy) {
+  if (!enemy.emitsSpores) {
+    return;
+  }
+
   const now = performance.now();
   const activeBossSpores = getActiveSporeCount(enemy.bossId);
   if (activeBossSpores >= MAX_ACTIVE_SPORES) {
@@ -666,7 +803,7 @@ function updateBossSporeSpawns(enemy) {
   }
 
   enemy.lastSporeAt = now;
-  spawnSpores(enemy, 1);
+  spawnSpores(enemy, enemy.sporeClusterSize || 1);
 }
 
 function spawnSpores(enemy, clusterSize) {
@@ -697,6 +834,7 @@ function spawnSpores(enemy, clusterSize) {
       const launchOffset = Math.max(28, enemy.radius * 0.13);
       const emittedX = spawnPos.x + Math.cos(angle) * launchOffset;
       const emittedY = spawnPos.y + Math.sin(angle) * launchOffset;
+      const depthScale = randomDepthScale(0.9, 1.15);
       emitSparks(world, emittedX, emittedY, 3);
       world.enemies.push({
         type: "spore",
@@ -712,7 +850,8 @@ function spawnSpores(enemy, clusterSize) {
         life: 16,
         spawnGraceUntil: performance.now() + 250,
         age: 0,
-        radius: 10,
+        depthScale,
+        radius: 10 * depthScale,
         hitPoints: Math.max(18, SPORE_HIT_POINTS * 0.7),
         maxHitPoints: Math.max(18, SPORE_HIT_POINTS * 0.7),
         rotation: 0,
@@ -738,6 +877,7 @@ function spawnMine() {
 
   world.mineSpawnCount += 1;
   const isLarge = world.mineSpawnCount % 4 === 0;
+  const depthScale = randomDepthScale(0.84, 1.18);
 
   world.enemies.push({
     type: "mine",
@@ -752,8 +892,9 @@ function spawnMine() {
     phase: Math.random() * Math.PI * 2,
     hitPoints: isLarge ? MINE_HIT_POINTS * 2 : MINE_HIT_POINTS,
     maxHitPoints: isLarge ? MINE_HIT_POINTS * 2 : MINE_HIT_POINTS,
-    radius: isLarge ? 33 : 22,
-    scale: isLarge ? 1.00 : 0.40,
+    depthScale,
+    radius: (isLarge ? 33 : 22) * depthScale,
+    scale: (isLarge ? 1.00 : 0.40) * depthScale,
     isLarge,
     scoreValue: isLarge ? 180 : 60,
   });
@@ -783,6 +924,7 @@ function spawnStageSpore() {
   }
 
   const spawnY = 80 + Math.random() * (world.height - 160);
+  const depthScale = randomDepthScale(0.9, 1.16);
   world.enemies.push({
     type: "spore",
     stageHazard: true,
@@ -797,7 +939,8 @@ function spawnStageSpore() {
     life: 18,
     spawnGraceUntil: performance.now() + 250,
     age: 0,
-    radius: 10,
+    depthScale,
+    radius: 10 * depthScale,
     hitPoints: Math.max(18, SPORE_HIT_POINTS * 0.7),
     maxHitPoints: Math.max(18, SPORE_HIT_POINTS * 0.7),
     rotation: 0,
@@ -817,62 +960,79 @@ function getEnemyShipScale(enemy) {
   return enemy.radius * 2 / Math.max(enemy.width, enemy.height);
 }
 
-function getEnemyShipProfile(record) {
+function getMinorEnemyShipProfile(record) {
   if (!record) {
     return null;
   }
 
   if (record.id === "enemy-orb-heavy") {
     return {
-      radius: 72,
-      hitPoints: 70,
-      collisionDamage: 42,
-      scoreValue: 180,
-      patrolAmplitude: 18 + Math.random() * 24,
-      patrolFrequency: 0.42 + Math.random() * 0.3,
-      wobbleAmplitude: 12 + Math.random() * 14,
-      wobbleFrequency: 0.55 + Math.random() * 0.35,
-      driftResponsiveness: 0.74 + Math.random() * 0.22,
+      radius: 58,
+      hitPoints: 46,
+      collisionDamage: 28,
+      scoreValue: 110,
+      patrolAmplitude: 18 + Math.random() * 20,
+      patrolFrequency: 0.45 + Math.random() * 0.25,
+      wobbleAmplitude: 10 + Math.random() * 10,
+      wobbleFrequency: 0.55 + Math.random() * 0.3,
+      driftResponsiveness: 0.8 + Math.random() * 0.2,
       rotationAmplitude: 0.05,
     };
   }
 
   if (record.id === "enemy-dart") {
     return {
-      radius: 76,
-      hitPoints: 92,
-      collisionDamage: 50,
-      scoreValue: 240,
-      patrolAmplitude: 36 + Math.random() * 40,
-      patrolFrequency: 0.85 + Math.random() * 0.45,
-      wobbleAmplitude: 10 + Math.random() * 10,
-      wobbleFrequency: 0.9 + Math.random() * 0.45,
-      driftResponsiveness: 1.25 + Math.random() * 0.25,
-      rotationAmplitude: 0.11,
+      radius: 62,
+      hitPoints: 58,
+      collisionDamage: 34,
+      scoreValue: 145,
+      patrolAmplitude: 28 + Math.random() * 28,
+      patrolFrequency: 0.78 + Math.random() * 0.32,
+      wobbleAmplitude: 9 + Math.random() * 9,
+      wobbleFrequency: 0.86 + Math.random() * 0.34,
+      driftResponsiveness: 1.05 + Math.random() * 0.2,
+      rotationAmplitude: 0.095,
     };
   }
 
   return {
-    radius: 60,
-    hitPoints: 42,
-    collisionDamage: 30,
-    scoreValue: 110,
-    patrolAmplitude: 24 + Math.random() * 36,
-    patrolFrequency: 0.55 + Math.random() * 0.45,
-    wobbleAmplitude: 18 + Math.random() * 20,
-    wobbleFrequency: 0.7 + Math.random() * 0.5,
-    driftResponsiveness: 0.9 + Math.random() * 0.35,
-    rotationAmplitude: 0.08,
+    radius: 50,
+    hitPoints: 32,
+    collisionDamage: 22,
+    scoreValue: 80,
+    patrolAmplitude: 20 + Math.random() * 26,
+    patrolFrequency: 0.58 + Math.random() * 0.35,
+    wobbleAmplitude: 12 + Math.random() * 14,
+    wobbleFrequency: 0.68 + Math.random() * 0.4,
+    driftResponsiveness: 0.9 + Math.random() * 0.25,
+    rotationAmplitude: 0.075,
   };
 }
 
-function spawnEnemyShip() {
-  const enemyRecord = chooseEnemyShipRecord();
+function spawnEnemyShip(options = {}) {
+  const variant = options.variant || "backbone";
+
+  if (variant === "mid-large" && world.stageMidLargeArchetype) {
+    spawnBackboneEnemyShip(world.stageMidLargeArchetype, { isMidLarge: true });
+    return;
+  }
+
+  if (variant === "backbone" && world.stageEnemyArchetype) {
+    spawnBackboneEnemyShip(world.stageEnemyArchetype);
+    return;
+  }
+
+  spawnMinorEnemyShip();
+}
+
+function spawnMinorEnemyShip() {
+  const enemyRecord = chooseMinorEnemyShipRecord();
   if (!enemyRecord) {
     return;
   }
 
-  const profile = getEnemyShipProfile(enemyRecord);
+  const profile = getMinorEnemyShipProfile(enemyRecord);
+  const depthScale = randomDepthScale(0.88, 1.16);
   const weaponId = enemyRecord.defaultEnemyShotId;
   const hardpoint = enemyRecord.lightHardpoints?.[0] || enemyRecord.hardpoints?.find((point) => point.type === "light");
   const spawnY = 70 + Math.random() * (world.height - 140);
@@ -900,13 +1060,61 @@ function spawnEnemyShip() {
     phase: Math.random() * Math.PI * 2,
     wobbleAmplitude: profile.wobbleAmplitude,
     wobbleFrequency: profile.wobbleFrequency,
-    radius: profile.radius,
+    depthScale,
+    radius: profile.radius * depthScale,
     hitPoints: profile.hitPoints,
     maxHitPoints: profile.hitPoints,
     collisionDamage: profile.collisionDamage,
     scoreValue: profile.scoreValue,
     rotationAmplitude: profile.rotationAmplitude,
     rotation: 0,
+  });
+}
+
+function spawnBackboneEnemyShip(archetype, options = {}) {
+  if (!archetype) {
+    return;
+  }
+
+  const spawnY = 80 + Math.random() * (world.height - 160);
+  const isMidLarge = Boolean(options.isMidLarge) || archetype.sizeClass === "mid-large";
+  const depthScale = isMidLarge ? randomDepthScale(0.96, 1.18) : randomDepthScale(0.9, 1.12);
+  const mounts = (archetype.weaponMounts || []).map((mount, index) => ({
+    hardpoint: mount.hardpoint,
+    weaponId: mount.weaponId,
+    cooldownUntil: performance.now() + 380 + Math.random() * 520 + index * 160,
+    angle: Math.PI,
+  }));
+
+  world.enemies.push({
+    type: "enemy-ship",
+    enemyId: archetype.id,
+    image: archetype.image,
+    parts: archetype.parts || null,
+    width: archetype.width,
+    height: archetype.height,
+    hardpoints: archetype.hardpoints || [],
+    weaponMounts: mounts,
+    x: world.width + 100,
+    y: spawnY,
+    baseY: spawnY,
+    patrolX: world.width * (0.63 + Math.random() * 0.2),
+    patrolAmplitude: archetype.patrolAmplitude,
+    patrolFrequency: archetype.patrolFrequency,
+    driftResponsiveness: archetype.driftResponsiveness,
+    phase: Math.random() * Math.PI * 2,
+    wobbleAmplitude: archetype.wobbleAmplitude,
+    wobbleFrequency: archetype.wobbleFrequency,
+    depthScale,
+    radius: archetype.radius * depthScale,
+    hitPoints: archetype.hitPoints,
+    maxHitPoints: archetype.hitPoints,
+    collisionDamage: archetype.collisionDamage,
+    scoreValue: archetype.scoreValue,
+    rotationAmplitude: archetype.rotationAmplitude,
+    rotation: 0,
+    isStageBackbone: true,
+    isStageMidLarge: isMidLarge,
   });
 }
 
@@ -924,6 +1132,142 @@ function getEnemyMountWorldPosition(hardpoint, enemy) {
     x: enemy.x + (hardpoint.x - enemy.width * 0.5) * scale,
     y: enemy.y + (hardpoint.y - enemy.height * 0.5) * scale,
   };
+}
+
+function getEnemyHitCircles(enemy) {
+  if (enemy.type === "boss" && enemy.hitCircles?.length) {
+    return enemy.hitCircles;
+  }
+  return [{ x: enemy.x, y: enemy.y, radius: enemy.radius || 0 }];
+}
+
+function isEnemyDamageable(enemy) {
+  return enemy.hitPoints > 0 && (!enemy.spawnGraceUntil || performance.now() >= enemy.spawnGraceUntil);
+}
+
+function findNearestEnemyTarget(x, y, maxRange) {
+  let nearest = null;
+  let nearestDistance = maxRange;
+  for (const enemy of world.enemies) {
+    if (!isEnemyDamageable(enemy)) {
+      continue;
+    }
+    for (const circle of getEnemyHitCircles(enemy)) {
+      const distance = Math.hypot(circle.x - x, circle.y - y) - circle.radius;
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = { enemy, x: circle.x, y: circle.y };
+      }
+    }
+  }
+  return nearest;
+}
+
+function damageEnemiesInRadius(x, y, radius, damage) {
+  for (const enemy of world.enemies) {
+    if (!isEnemyDamageable(enemy)) {
+      continue;
+    }
+    const circles = getEnemyHitCircles(enemy);
+    let nearestDistance = Infinity;
+    for (const circle of circles) {
+      const distance = Math.hypot(circle.x - x, circle.y - y);
+      if (distance <= radius + circle.radius) {
+        nearestDistance = Math.min(nearestDistance, distance);
+      }
+    }
+    if (!Number.isFinite(nearestDistance)) {
+      continue;
+    }
+    const representativeRadius = Math.max(...circles.map((circle) => circle.radius));
+    const falloff = Math.max(0.3, 1 - nearestDistance / (radius + representativeRadius));
+    enemy.hitPoints -= damage * falloff;
+    emitSparks(world, enemy.x, enemy.y, enemy.type === "boss" ? 9 : 6);
+    if (enemy.hitPoints <= 0) {
+      enemy.hitPoints = 0;
+      destroyEnemy(enemy);
+    }
+  }
+}
+
+function updateWardens(deltaSeconds) {
+  if (world.scene !== "running") {
+    return;
+  }
+
+  const now = performance.now();
+  world.wardens = world.wardens.filter((warden) => {
+    warden.life -= deltaSeconds;
+    warden.age += deltaSeconds;
+    warden.rotation += warden.rotationSpeed * deltaSeconds;
+
+    if (warden.age >= warden.lingerDuration) {
+      const dx = warden.targetX - warden.x;
+      const dy = warden.targetY - warden.y;
+      const directionDistance = Math.max(1, Math.hypot(dx, dy));
+      const desiredVx = (dx / directionDistance) * warden.cruiseSpeed;
+      const desiredVy = (dy / directionDistance) * warden.cruiseSpeed;
+      const blend = Math.min(1, deltaSeconds * warden.steerRate);
+      warden.vx += (desiredVx - warden.vx) * blend;
+      warden.vy += (desiredVy - warden.vy) * blend;
+    } else {
+      warden.vx *= 0.97;
+      warden.vy *= 0.97;
+    }
+
+    warden.x += warden.vx * deltaSeconds;
+    warden.y += warden.vy * deltaSeconds;
+
+    if (warden.age >= warden.lingerDuration) {
+      const target = findNearestEnemyTarget(warden.x, warden.y, warden.attackRange);
+      if (target) {
+        const attackAngle = Math.atan2(target.y - warden.y, target.x - warden.x);
+        if (now >= warden.nextPdShotAt) {
+          spawnWeaponProjectile({ x: warden.x, y: warden.y }, attackAngle, WARDEN_PD_WEAPON);
+          warden.nextPdShotAt = now + 120;
+        }
+        if (now >= warden.nextLaserBurstAt) {
+          spawnWeaponProjectile({ x: warden.x, y: warden.y }, attackAngle - 0.04, WARDEN_LASER_WEAPON);
+          spawnWeaponProjectile({ x: warden.x, y: warden.y }, attackAngle + 0.04, WARDEN_LASER_WEAPON);
+          warden.nextLaserBurstAt = now + 420;
+        }
+      }
+    }
+
+    if (warden.life <= 0) {
+      emitExplosion(world, warden.x, warden.y);
+      return false;
+    }
+
+    for (const enemy of world.enemies) {
+      if (!isEnemyDamageable(enemy)) {
+        continue;
+      }
+      const hit = getEnemyHitCircles(enemy).some((circle) => {
+        const distance = Math.hypot(circle.x - warden.x, circle.y - warden.y);
+        return distance <= circle.radius + warden.radius;
+      });
+      if (!hit) {
+        continue;
+      }
+
+      emitExplosion(world, warden.x, warden.y, enemy.type === "boss"
+        ? {
+          partOptions: {
+            partKind: "enemy-part",
+            partImages: world.enemyPartImages,
+          },
+        }
+        : undefined);
+      damageEnemiesInRadius(warden.x, warden.y, warden.explosiveRadius, warden.explosiveDamage);
+      return false;
+    }
+
+    return warden.x > -80
+      && warden.x < world.width + 80
+      && warden.y > -80
+      && warden.y < world.height + 80;
+  });
 }
 
 function updateEnemyShipWeapons(enemy) {
@@ -1059,7 +1403,7 @@ function updateProjectiles(deltaSeconds) {
       updateLobbedProjectile(projectile, deltaSeconds);
     }
 
-    if (projectile.homing) {
+    if (projectile.homing && !projectile.homingPaused) {
       updateHomingProjectile(projectile, deltaSeconds);
     }
 
@@ -1067,6 +1411,15 @@ function updateProjectiles(deltaSeconds) {
     projectile.y += projectile.vy * deltaSeconds;
     projectile.rotation = Math.atan2(projectile.vy, projectile.vx);
     projectile.spriteRotation = (projectile.spriteRotation || 0) + (projectile.spriteSpin || 0) * deltaSeconds;
+
+    if (projectile.sparkleEnabled) {
+      projectile.sparkleTimer = (projectile.sparkleTimer || 0) - deltaSeconds;
+      if (projectile.sparkleTimer <= 0) {
+        projectile.sparkleTimer = 0.025 + Math.random() * 0.05;
+        projectile.sparkleAngleOffset = (Math.random() - 0.5) * 0.9;
+      }
+    }
+
     projectile.life -= deltaSeconds;
 
     if (projectile.trail) {
@@ -1100,16 +1453,57 @@ function updateHomingProjectile(projectile, deltaSeconds) {
   }
 
   let target = null;
-  let nearestDistance = projectile.homingRange || Infinity;
+  let bestScore = Infinity;
+  const homingRange = projectile.homingRange || Infinity;
+  const currentAngle = Math.atan2(projectile.vy, projectile.vx);
+  const pathRadius = projectile.homingPathRadius;
+  const acquireAngle = projectile.homingAcquireAngle;
+  const forwardOnly = Boolean(projectile.homingForwardOnly);
 
   for (const enemy of world.enemies) {
     if (enemy.hitPoints <= 0) {
       continue;
     }
+    if (enemy.spawnGraceUntil && performance.now() < enemy.spawnGraceUntil) {
+      continue;
+    }
 
-    const distance = Math.hypot(enemy.x - projectile.x, enemy.y - projectile.y);
-    if (distance < nearestDistance) {
-      nearestDistance = distance;
+    const dx = enemy.x - projectile.x;
+    const dy = enemy.y - projectile.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance > homingRange) {
+      continue;
+    }
+
+    const headingDx = Math.cos(currentAngle);
+    const headingDy = Math.sin(currentAngle);
+    const forwardDistance = dx * headingDx + dy * headingDy;
+    if (forwardOnly && forwardDistance < -12) {
+      continue;
+    }
+
+    const lateralDistance = Math.abs(dx * headingDy - dy * headingDx);
+    if (pathRadius && lateralDistance > pathRadius) {
+      continue;
+    }
+
+    if (acquireAngle !== undefined && Number.isFinite(acquireAngle)) {
+      const desiredAngle = Math.atan2(dy, dx);
+      let angleDelta = desiredAngle - currentAngle;
+      while (angleDelta > Math.PI) {
+        angleDelta -= Math.PI * 2;
+      }
+      while (angleDelta < -Math.PI) {
+        angleDelta += Math.PI * 2;
+      }
+      if (Math.abs(angleDelta) > acquireAngle) {
+        continue;
+      }
+    }
+
+    const score = distance + (pathRadius ? lateralDistance * 0.75 : 0);
+    if (score < bestScore) {
+      bestScore = score;
       target = enemy;
     }
   }
@@ -1119,7 +1513,6 @@ function updateHomingProjectile(projectile, deltaSeconds) {
   }
 
   const desiredAngle = Math.atan2(target.y - projectile.y, target.x - projectile.x);
-  const currentAngle = Math.atan2(projectile.vy, projectile.vx);
   let angleDelta = desiredAngle - currentAngle;
 
   while (angleDelta > Math.PI) {
@@ -1142,6 +1535,16 @@ function updateBeams(deltaSeconds) {
   }
 
   for (const beam of world.beams) {
+    if (beam.trackPointer && world.currentShip && beam.trackHardpoint) {
+      const mountPos = getMountWorldPosition(beam.trackHardpoint, world.currentShip);
+      const angle = Math.atan2(pointer.y - mountPos.y, pointer.x - mountPos.x);
+      const range = Math.hypot(world.width, world.height) * 1.3;
+      beam.x1 = mountPos.x;
+      beam.y1 = mountPos.y;
+      beam.x2 = mountPos.x + Math.cos(angle) * range;
+      beam.y2 = mountPos.y + Math.sin(angle) * range;
+    }
+
     beam.life -= deltaSeconds;
     if (beam.damagePerSecond > 0) {
       applyBeamDamage({
@@ -1158,6 +1561,11 @@ function updateBeams(deltaSeconds) {
 
 function fireMountedWeapons(ship) {
   const now = performance.now();
+  const phaserMounts = (ship.weaponMounts || []).filter((mount) => getWeaponDef(mount.weaponId)?.id === "phaser");
+  if (phaserMounts.length) {
+    firePhaserBank(ship, phaserMounts, now);
+  }
+
   for (const mount of ship.weaponMounts || []) {
     if (!mount.weaponId) {
       continue;
@@ -1165,6 +1573,9 @@ function fireMountedWeapons(ship) {
 
     const weapon = getWeaponDef(mount.weaponId);
     if (!weapon) {
+      continue;
+    }
+    if (weapon.id === "phaser") {
       continue;
     }
     const mountPos = getMountWorldPosition(mount.hardpoint, ship);
@@ -1190,13 +1601,80 @@ function fireMountedWeapons(ship) {
   }
 }
 
+function getOrCreatePhaserBank(ship) {
+  if (!ship.phaserBank) {
+    ship.phaserBank = {
+      firingUntil: 0,
+      cooldownUntil: 0,
+      nextShotAt: 0,
+    };
+  }
+  return ship.phaserBank;
+}
+
+function firePhaserBank(ship, phaserMounts, now) {
+  const bank = getOrCreatePhaserBank(ship);
+  const baseWeapon = getWeaponDef("phaser");
+  if (!baseWeapon) {
+    return;
+  }
+
+  if (!pointer.down) {
+    return;
+  }
+
+  if (now < bank.cooldownUntil) {
+    return;
+  }
+
+  if (now >= bank.firingUntil) {
+    const sustainDuration = baseWeapon.sustainDurationMs || 1200;
+    const sustainCooldown = baseWeapon.sustainCooldownMs || 1800;
+    bank.firingUntil = now + sustainDuration;
+    bank.cooldownUntil = bank.firingUntil + sustainCooldown;
+    bank.nextShotAt = now;
+  }
+
+  if (now > bank.firingUntil || now < bank.nextShotAt) {
+    return;
+  }
+
+  const emittingMount = phaserMounts.reduce((forwardMost, mount) => {
+    if (!forwardMost) {
+      return mount;
+    }
+    return (mount.hardpoint?.x || 0) > (forwardMost.hardpoint?.x || 0) ? mount : forwardMost;
+  }, null);
+  if (!emittingMount) {
+    return;
+  }
+  const mountPos = getMountWorldPosition(emittingMount.hardpoint, ship);
+  const angle = emittingMount.angle;
+  const extraBanks = Math.max(0, phaserMounts.length - 1);
+  const damageMultiplier = 1 + extraBanks * (baseWeapon.bankDamageBonusPerExtra || 0.75);
+  fireWeapon(mountPos, angle, {
+    ...baseWeapon,
+    damage: (baseWeapon.damage || 0) * damageMultiplier,
+    beamDamagePerSecond: (baseWeapon.beamDamagePerSecond || 0) * damageMultiplier,
+  }, {
+    trackPointer: true,
+    trackHardpoint: emittingMount.hardpoint,
+  });
+  bank.nextShotAt = now + baseWeapon.cooldown;
+}
+
 function fireWeapon(mount, angle, weapon, options = {}) {
   if (weapon.soundPath && !options.isEnemy) {
     playSound(world, weapon.soundPath, { volume: weapon.fireMode === "beam" ? 0.42 : 0.36 });
   }
 
+  if (weapon.fireMode === "warden-drone") {
+    spawnWardenDrone(mount, angle, weapon, options);
+    return;
+  }
+
   if (weapon.fireMode === "beam") {
-    spawnBeamWeapon(mount, angle, weapon);
+    spawnBeamWeapon(mount, angle, weapon, options);
     return;
   }
 
@@ -1252,6 +1730,21 @@ function spawnWeaponProjectile(mount, angle, weapon, options = {}) {
     projectile.vx = (dx / distance) * weapon.projectileSpeed;
     projectile.vy = (dy / distance) * weapon.projectileSpeed - 150;
     projectile.gravity = weapon.gravity || 220;
+
+    if (weapon.id === "torpedo") {
+      projectile.lockedTargetX = target.x;
+      projectile.lockedTargetY = target.y;
+      projectile.torpedoPhase = "launch";
+      projectile.torpedoPhaseTime = 0;
+      projectile.torpedoLaunchDuration = 0.18;
+      projectile.torpedoDriftDuration = 0.58;
+      projectile.torpedoDriftDamping = 0.86;
+      projectile.torpedoBoostSpeed = 760;
+      projectile.torpedoBoostTurnRate = 7.2;
+      projectile.torpedoBoostAcceleration = 1700;
+      projectile.torpedoDriftDirection = Math.random() > 0.5 ? 1 : -1;
+      projectile.homingPaused = true;
+    }
   }
 
   if (weapon.homingTurnRate) {
@@ -1259,6 +1752,15 @@ function spawnWeaponProjectile(mount, angle, weapon, options = {}) {
     projectile.homingDelay = weapon.homingDelay || 0;
     projectile.homingTurnRate = weapon.homingTurnRate;
     projectile.homingRange = weapon.homingRange || 800;
+    projectile.homingPathRadius = weapon.homingPathRadius;
+    projectile.homingForwardOnly = Boolean(weapon.homingForwardOnly);
+    projectile.homingAcquireAngle = weapon.homingAcquireAngle;
+  }
+
+  if (weapon.id === "large-phototorpedo") {
+    projectile.sparkleEnabled = true;
+    projectile.sparkleTimer = 0.03 + Math.random() * 0.05;
+    projectile.sparkleAngleOffset = (Math.random() - 0.5) * 0.75;
   }
 
   world.projectiles.push({
@@ -1266,9 +1768,37 @@ function spawnWeaponProjectile(mount, angle, weapon, options = {}) {
   });
 }
 
-function spawnBeamWeapon(mount, angle, weapon) {
-  const endX = world.width + 40;
-  const endY = mount.y + Math.tan(angle) * (endX - mount.x);
+function spawnWardenDrone(mount, angle, weapon, options = {}) {
+  const target = options.target || pointer;
+  const launchSpeed = 34;
+  world.wardens.push({
+    weaponId: weapon.id,
+    x: mount.x + Math.cos(angle) * 18,
+    y: mount.y + Math.sin(angle) * 18,
+    vx: world.player.vx * 0.18 + Math.cos(angle) * launchSpeed,
+    vy: world.player.vy * 0.18 + Math.sin(angle) * launchSpeed,
+    rotation: angle,
+    rotationSpeed: 2.4,
+    radius: 15,
+    life: 7.6,
+    age: 0,
+    lingerDuration: 1.0,
+    targetX: target.x,
+    targetY: target.y,
+    cruiseSpeed: 390,
+    steerRate: 1.7,
+    attackRange: 520,
+    nextPdShotAt: performance.now() + 120,
+    nextLaserBurstAt: performance.now() + 340,
+    explosiveRadius: 68,
+    explosiveDamage: 110,
+  });
+}
+
+function spawnBeamWeapon(mount, angle, weapon, options = {}) {
+  const range = Math.hypot(world.width, world.height) * 1.3;
+  const endX = mount.x + Math.cos(angle) * range;
+  const endY = mount.y + Math.sin(angle) * range;
 
   world.beams.push({
     weaponId: weapon.id,
@@ -1281,6 +1811,8 @@ function spawnBeamWeapon(mount, angle, weapon) {
     width: weapon.beamWidth,
     color: weapon.beamColor,
     damagePerSecond: weapon.beamDamagePerSecond || 0,
+    trackPointer: Boolean(options.trackPointer),
+    trackHardpoint: options.trackHardpoint || null,
   });
 
   if (weapon.damage > 0) {
@@ -1294,23 +1826,84 @@ function spawnBeamWeapon(mount, angle, weapon) {
 }
 
 function updateLobbedProjectile(projectile, deltaSeconds) {
+  if (projectile.weaponId === "torpedo" && projectile.torpedoPhase) {
+    projectile.torpedoPhaseTime = (projectile.torpedoPhaseTime || 0) + deltaSeconds;
+
+    if (projectile.torpedoPhase === "launch") {
+      projectile.vx *= Math.max(0.84, 1 - deltaSeconds * 0.8);
+      projectile.vy += 120 * deltaSeconds;
+
+      if (projectile.torpedoPhaseTime >= (projectile.torpedoLaunchDuration || 0.18)) {
+        projectile.torpedoPhase = "drift";
+        projectile.torpedoPhaseTime = 0;
+        projectile.vx *= 0.55;
+        projectile.vy *= 0.32;
+      }
+      return;
+    }
+
+    if (projectile.torpedoPhase === "drift") {
+      const damping = Math.max(0, 1 - (1 - (projectile.torpedoDriftDamping || 0.86)) * deltaSeconds * 60);
+      projectile.vx *= damping;
+      projectile.vy *= Math.min(1, damping + 0.08);
+      projectile.vx += (projectile.torpedoDriftDirection || 1) * 22 * deltaSeconds;
+      projectile.vy += 24 * deltaSeconds;
+
+      if (projectile.torpedoPhaseTime >= (projectile.torpedoDriftDuration || 0.58)) {
+        projectile.torpedoPhase = "boost";
+        projectile.torpedoPhaseTime = 0;
+        projectile.homingPaused = false;
+      }
+      return;
+    }
+
+    if (projectile.torpedoPhase === "boost") {
+      const targetX = projectile.lockedTargetX ?? projectile.x + projectile.vx * 2;
+      const targetY = projectile.lockedTargetY ?? projectile.y + projectile.vy * 2;
+      const desiredAngle = Math.atan2(targetY - projectile.y, targetX - projectile.x);
+      const currentAngle = Math.atan2(projectile.vy, projectile.vx);
+      let angleDelta = desiredAngle - currentAngle;
+      while (angleDelta > Math.PI) {
+        angleDelta -= Math.PI * 2;
+      }
+      while (angleDelta < -Math.PI) {
+        angleDelta += Math.PI * 2;
+      }
+
+      const maxTurn = (projectile.torpedoBoostTurnRate || 7.2) * deltaSeconds;
+      const nextAngle = currentAngle + Math.max(-maxTurn, Math.min(maxTurn, angleDelta));
+      const currentSpeed = Math.hypot(projectile.vx, projectile.vy);
+      const boostSpeed = projectile.torpedoBoostSpeed || 760;
+      const acceleratedSpeed = Math.min(
+        boostSpeed,
+        currentSpeed + (projectile.torpedoBoostAcceleration || 1700) * deltaSeconds,
+      );
+
+      projectile.vx = Math.cos(nextAngle) * acceleratedSpeed;
+      projectile.vy = Math.sin(nextAngle) * acceleratedSpeed;
+      return;
+    }
+  }
+
   projectile.vy += (projectile.gravity || 0) * deltaSeconds;
 }
 
 function destroyEnemy(enemy) {
-  world.score += enemy.scoreValue || 0;
-  updateScoreDisplay();
-  playRandomSound(world, ENEMY_EXPLODE_SOUNDS, { volume: enemy.isLarge ? 0.5 : 0.38 });
-  emitExplosion(world, enemy.x, enemy.y);
-  if (enemy.isLarge) {
-    emitExplosion(world, enemy.x, enemy.y);
+  if (enemy.deathSequenceActive) {
+    return;
   }
 
-  if (enemy.isLarge) {
+  enemy.deathSequenceActive = true;
+  world.score += enemy.scoreValue || 0;
+  updateScoreDisplay();
+  playRandomSound(world, ENEMY_EXPLODE_SOUNDS, { volume: enemy.type === "boss" ? 0.48 : (enemy.isLarge ? 0.5 : 0.38) });
+
+  if (enemy.isStageBackbone) {
     spawnWeaponDrop(enemy.x, enemy.y);
   }
 
   if (enemy.type === "boss") {
+    spawnBossDeathWreck(enemy);
     world.defeatedBossCount += 1;
     world.stageIndex += 1;
     if (world.bossEncounter?.bossEnemy === enemy) {
@@ -1318,21 +1911,159 @@ function destroyEnemy(enemy) {
     }
     prepareNextStage();
     scatterBossWeaponDrops(enemy.x, enemy.y, 4);
-    emitShipParts(world, enemy.x, enemy.y, 16, {
-      minSpeed: 65,
-      maxSpeed: 190,
-      spread: Math.PI * 1.8,
+    enemy.hitPoints = 0;
+    return;
+  }
+
+  emitExplosion(world, enemy.x, enemy.y);
+  if (enemy.isLarge) {
+    emitExplosion(world, enemy.x, enemy.y);
+  }
+}
+
+function emitBossStructureScatter(enemy, intensity = 1) {
+  const bounds = getBossBounds(enemy);
+  const composedParts = enemy.parts || [];
+  const sampleParts = composedParts.slice(0, Math.min(32, composedParts.length));
+
+  for (const part of sampleParts) {
+    const partImage = world.enemyPartImages?.[part.imageIndex];
+    if (!partImage?.image) {
+      continue;
+    }
+
+    const flipScale = enemy.flipX ? -1 : 1;
+    const worldX = enemy.x + part.x * bounds.scale * flipScale;
+    const worldY = enemy.y + part.y * bounds.scale;
+    const awayAngle = Math.atan2(worldY - enemy.y, worldX - enemy.x) + (Math.random() - 0.5) * 0.55;
+    const speed = 75 + Math.random() * 180;
+
+    world.particles.push({
+      kind: "enemy-part",
+      x: worldX,
+      y: worldY,
+      vx: Math.cos(awayAngle) * speed,
+      vy: Math.sin(awayAngle) * speed,
+      life: 1 + Math.random() * 1.7,
+      maxLife: 2.7,
+      size: (partImage.width * part.scale * bounds.scale) * (0.45 + Math.random() * 0.6),
+      rotation: part.rotation + Math.random() * Math.PI * 2,
+      rotationSpeed: (Math.random() - 0.5) * 8.8,
+      partIndex: part.imageIndex,
     });
-    for (let i = 0; i < 3; i += 1) {
-      const burstX = enemy.x + (Math.random() - 0.5) * 90;
-      const burstY = enemy.y + (Math.random() - 0.5) * 60;
-      emitExplosion(world, burstX, burstY);
-      emitShipParts(world, burstX, burstY, 6, {
-        minSpeed: 60,
-        maxSpeed: 170,
+  }
+
+  emitShipParts(world, enemy.x, enemy.y, Math.round((28 + Math.floor(Math.random() * 16)) * intensity), {
+    direction: Math.random() * Math.PI * 2,
+    spread: Math.PI * 2,
+    minSpeed: 80,
+    maxSpeed: 260,
+    minSize: 18,
+    maxSize: 40,
+    partKind: "enemy-part",
+    partImages: world.enemyPartImages,
+  });
+}
+
+function spawnBossDeathWreck(enemy) {
+  const bounds = getBossBounds(enemy);
+  world.wrecks.push({
+    kind: "boss",
+    x: enemy.x,
+    y: enemy.y,
+    vx: -4 + Math.random() * 8,
+    vy: 14 + Math.random() * 10,
+    ay: 5 + Math.random() * 4,
+    rotation: enemy.rotation || 0,
+    rotationSpeed: 0,
+    width: bounds.width,
+    height: bounds.height,
+    scale: bounds.scale,
+    flipX: enemy.flipX,
+    parts: enemy.parts || null,
+    image: enemy.image || null,
+    sourceEnemy: enemy,
+    emitCooldown: 0,
+  });
+  emitBossStructureScatter(enemy, 0.7);
+}
+
+function spawnPlayerDeathWreck() {
+  const ship = world.currentShip;
+  if (!ship) {
+    return;
+  }
+
+  const bounds = getShipBounds(ship);
+  world.wrecks.push({
+    kind: "player",
+    x: world.player.x,
+    y: world.player.y,
+    vx: Math.max(80, world.player.vx * 0.6 + 120),
+    vy: Math.max(25, world.player.vy * 0.45 + 35),
+    ay: 38,
+    rotation: 0,
+    rotationSpeed: 0,
+    image: ship.image,
+    width: bounds.width,
+    height: bounds.height,
+    emitCooldown: 0,
+  });
+}
+
+function updateWrecks(deltaSeconds) {
+  world.wrecks = world.wrecks.filter((wreck) => {
+    wreck.vy += (wreck.ay || 0) * deltaSeconds;
+    wreck.x += wreck.vx * deltaSeconds;
+    wreck.y += wreck.vy * deltaSeconds;
+    wreck.rotation += (wreck.rotationSpeed || 0) * deltaSeconds;
+    wreck.emitCooldown = (wreck.emitCooldown || 0) - deltaSeconds;
+
+    if (wreck.emitCooldown <= 0) {
+      wreck.emitCooldown = wreck.kind === "boss"
+        ? 0.10 + Math.random() * 0.12
+        : 0.05 + Math.random() * 0.08;
+      const emitX = wreck.x - (wreck.kind === "player" ? wreck.width * 0.18 : 0);
+      const emitY = wreck.y + wreck.height * 0.1;
+      emitSparks(world, emitX, emitY, wreck.kind === "player" ? 2 : 3);
+
+      world.particles.push({
+        kind: "smoke",
+        x: emitX + (Math.random() - 0.5) * 12,
+        y: emitY + (Math.random() - 0.5) * 10,
+        vx: -20 + (Math.random() - 0.5) * 18,
+        vy: -26 + (Math.random() - 0.5) * 16,
+        life: 0.8 + Math.random() * 0.8,
+        maxLife: 1.6,
+        size: 12 + Math.random() * 18,
+        color: Math.random() > 0.5 ? "#2f2f2f" : "#4f4f4f",
+      });
+
+      emitShipParts(world, emitX, emitY, wreck.kind === "player" ? 1 : 2, {
+        direction: Math.PI + (Math.random() - 0.5) * 0.6,
+        spread: Math.PI * 1.1,
+        minSpeed: 30,
+        maxSpeed: wreck.kind === "player" ? 90 : 120,
+        partKind: wreck.kind === "boss" ? "enemy-part" : "part",
+        partImages: wreck.kind === "boss" ? world.enemyPartImages : world.partImages,
+        minSize: wreck.kind === "boss" ? 16 : 14,
+        maxSize: wreck.kind === "boss" ? 30 : 24,
       });
     }
-  }
+
+    const outOfBounds = (
+      wreck.y - wreck.height * 0.6 > world.height + 80
+      || wreck.y + wreck.height * 0.6 < -120
+      || wreck.x - wreck.width * 0.6 > world.width + 140
+      || wreck.x + wreck.width * 0.6 < -120
+    );
+    if (outOfBounds && wreck.kind === "player") {
+      world.playerWreckExited = true;
+      return false;
+    }
+
+    return !outOfBounds;
+  });
 }
 
 function scatterBossWeaponDrops(x, y, count) {
@@ -1458,6 +2189,83 @@ function renderBackground() {
   }
 }
 
+function buildBlackEnemyPartImages(records) {
+  return (records || []).map((record) => {
+    const source = record?.image;
+    const width = record?.width || source?.naturalWidth || source?.width || 0;
+    const height = record?.height || source?.naturalHeight || source?.height || 0;
+    if (!source || width <= 0 || height <= 0) {
+      return record;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const offscreen = canvas.getContext("2d");
+    offscreen.drawImage(source, 0, 0, width, height);
+    offscreen.globalCompositeOperation = "source-in";
+    offscreen.fillStyle = "#050505";
+    offscreen.fillRect(0, 0, width, height);
+    offscreen.globalCompositeOperation = "source-over";
+
+    return {
+      ...record,
+      image: canvas,
+      width,
+      height,
+    };
+  });
+}
+
+function getEnemyPartImageRecord(partIndex) {
+  const records = world.enemyPartBlackImages?.length ? world.enemyPartBlackImages : world.enemyPartImages;
+  if (!records?.length) {
+    return null;
+  }
+  return records[partIndex % records.length] || null;
+}
+
+function renderBossComposite(record, centerX, centerY, scale, options = {}) {
+  if (!record?.parts?.length || !world.enemyPartImages?.length) {
+    return false;
+  }
+
+  const now = performance.now() / 1000;
+  const rotation = options.rotation || 0;
+  const flipX = Boolean(options.flipX);
+  const pulseTime = options.pulseTime ?? now;
+
+  ctx.save();
+  ctx.globalAlpha = 1;
+  ctx.translate(centerX, centerY);
+  ctx.rotate(rotation);
+  ctx.scale(flipX ? -1 : 1, 1);
+
+  for (const part of record.parts) {
+    const imageRecord = getEnemyPartImageRecord(part.imageIndex);
+    const image = imageRecord?.image;
+    if (!image) {
+      continue;
+    }
+
+    const wobbleAngle = Math.sin(pulseTime * 0.6 + (part.phase || 0)) * (part.wobble || 0);
+    const pulseOffset = Math.sin(pulseTime * (part.pulseSpeed || 1) + (part.phase || 0)) * (part.pulseAmplitude || 0);
+    const localX = part.x * scale;
+    const localY = (part.y + pulseOffset) * scale;
+    const drawWidth = imageRecord.width * part.scale * scale;
+    const drawHeight = imageRecord.height * part.scale * scale;
+
+    ctx.save();
+    ctx.translate(localX, localY);
+    ctx.rotate(part.rotation + wobbleAngle);
+    ctx.drawImage(image, -drawWidth * 0.5, -drawHeight * 0.5, drawWidth, drawHeight);
+    ctx.restore();
+  }
+
+  ctx.restore();
+  return true;
+}
+
 function renderBossPreview() {
   const encounter = world.bossEncounter;
   if (!encounter || encounter.phase !== "preview") {
@@ -1465,18 +2273,52 @@ function renderBossPreview() {
   }
 
   const boss = encounter.bossRecord;
-  ctx.save();
-  ctx.globalAlpha = 0.82;
-  ctx.translate(encounter.previewX, encounter.previewY);
-  ctx.scale(-1, 1);
-  ctx.drawImage(
-    boss.image,
-    -encounter.previewWidth * 0.5,
-    -encounter.previewHeight * 0.5,
-    encounter.previewWidth,
-    encounter.previewHeight,
+  const renderedComposite = renderBossComposite(
+    boss,
+    encounter.previewX,
+    encounter.previewY,
+    encounter.previewScale,
+    { flipX: true },
   );
-  ctx.restore();
+  if (!renderedComposite && boss.image) {
+    ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.translate(encounter.previewX, encounter.previewY);
+    ctx.scale(-1, 1);
+    ctx.drawImage(
+      boss.image,
+      -encounter.previewWidth * 0.5,
+      -encounter.previewHeight * 0.5,
+      encounter.previewWidth,
+      encounter.previewHeight,
+    );
+    ctx.restore();
+  }
+}
+
+function renderWrecks() {
+  for (const wreck of world.wrecks) {
+    ctx.save();
+    ctx.translate(wreck.x, wreck.y);
+    ctx.rotate(wreck.rotation || 0);
+
+    if (wreck.kind === "boss") {
+      const renderedComposite = renderBossComposite(wreck, 0, 0, wreck.scale || 1, {
+        flipX: wreck.flipX,
+      });
+      if (!renderedComposite && wreck.image) {
+        ctx.scale(wreck.flipX ? -1 : 1, 1);
+        ctx.drawImage(wreck.image, -wreck.width * 0.5, -wreck.height * 0.5, wreck.width, wreck.height);
+      }
+      ctx.restore();
+      continue;
+    }
+
+    if (wreck.kind === "player" && wreck.image) {
+      ctx.drawImage(wreck.image, -wreck.width * 0.5, -wreck.height * 0.5, wreck.width, wreck.height);
+    }
+    ctx.restore();
+  }
 }
 
 function renderShip(ship) {
@@ -1502,7 +2344,10 @@ function renderEnemies() {
       : enemy.type === "spore"
         ? world.sporeImage
         : world.mineImage;
-    if (!image) {
+    if (enemy.type !== "boss" && enemy.type !== "enemy-ship" && !image) {
+      continue;
+    }
+    if (enemy.type === "enemy-ship" && !image && !enemy.parts?.length) {
       continue;
     }
 
@@ -1512,8 +2357,15 @@ function renderEnemies() {
 
     if (enemy.type === "boss") {
       const bounds = getBossBounds(enemy);
-      ctx.scale(enemy.flipX ? -1 : 1, 1);
-      ctx.drawImage(image, -bounds.width * 0.5, -bounds.height * 0.5, bounds.width, bounds.height);
+      const renderedComposite = renderBossComposite(enemy, 0, 0, bounds.scale, {
+        flipX: enemy.flipX,
+        rotation: enemy.rotation || 0,
+        pulseTime: enemy.floatTime || 0,
+      });
+      if (!renderedComposite && image) {
+        ctx.scale(enemy.flipX ? -1 : 1, 1);
+        ctx.drawImage(image, -bounds.width * 0.5, -bounds.height * 0.5, bounds.width, bounds.height);
+      }
       ctx.restore();
       renderBossSpawnerPoints(enemy);
       continue;
@@ -1521,10 +2373,20 @@ function renderEnemies() {
 
     if (enemy.type === "enemy-ship") {
       const scale = getEnemyShipScale(enemy);
-      const width = enemy.width * scale;
-      const height = enemy.height * scale;
-      ctx.drawImage(image, -width * 0.5, -height * 0.5, width, height);
+      const renderedComposite = enemy.parts?.length
+        ? renderBossComposite(enemy, 0, 0, scale, {
+          flipX: false,
+          rotation: 0,
+          pulseTime: enemy.phase || 0,
+        })
+        : false;
+      if (!renderedComposite) {
+        const width = enemy.width * scale;
+        const height = enemy.height * scale;
+        ctx.drawImage(image, -width * 0.5, -height * 0.5, width, height);
+      }
       ctx.restore();
+      renderEnemyShipEmitterPoints(enemy);
       continue;
     }
 
@@ -1548,15 +2410,15 @@ function renderEnemies() {
 
 function renderBossSpawnerPoints(enemy) {
   const image = world.enemySpawnerImage;
-  const spawnPoints = getBossSpawnerPoints(enemy);
-  if (!image || !spawnPoints?.length) {
+  const emitterPoints = getBossEmitterPoints(enemy);
+  if (!image || !emitterPoints?.length) {
     return;
   }
 
   const bounds = getBossBounds(enemy);
   const size = Math.max(18, Math.min(34, bounds.width * 0.06));
 
-  spawnPoints.forEach((point, index) => {
+  emitterPoints.forEach((point, index) => {
     const mountPos = getBossMountWorldPosition(point, enemy);
     const spin = (enemy.floatTime || 0) * 0.75 + index * 0.6;
     ctx.save();
@@ -1565,6 +2427,41 @@ function renderBossSpawnerPoints(enemy) {
     ctx.globalAlpha = 0.95;
     ctx.drawImage(image, -size * 0.5, -size * 0.5, size, size);
     ctx.globalAlpha = 1;
+    ctx.restore();
+  });
+}
+
+function renderEnemyShipEmitterPoints(enemy) {
+  if (!enemy?.weaponMounts?.length || !(enemy.isStageBackbone || enemy.isStageMidLarge)) {
+    return;
+  }
+
+  const image = world.enemySpawnerImage;
+  const scale = getEnemyShipScale(enemy);
+  const size = image ? Math.max(12, Math.min(20, enemy.radius * 0.22)) : 0;
+
+  enemy.weaponMounts.forEach((mount, index) => {
+    const mountPos = getEnemyMountWorldPosition(mount.hardpoint, enemy);
+    if (image) {
+      ctx.save();
+      ctx.translate(mountPos.x, mountPos.y);
+      ctx.rotate((enemy.phase || 0) * 0.85 + index * 0.5);
+      ctx.globalAlpha = 0.95;
+      ctx.drawImage(image, -size * 0.5, -size * 0.5, size, size);
+      ctx.globalAlpha = 1;
+      ctx.restore();
+      return;
+    }
+
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.beginPath();
+    ctx.arc(mountPos.x, mountPos.y, Math.max(3, 4.5 * scale), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#050505";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
     ctx.restore();
   });
 }
@@ -1658,13 +2555,13 @@ function renderProjectiles() {
     }
 
     const projectileImage = projectile.projectileSpriteId
-      ? world.enemyShotImages?.[projectile.projectileSpriteId]
+      ? world.enemyShotImages?.[projectile.projectileSpriteId] || world.projectileSpriteImages?.[projectile.projectileSpriteId]
       : null;
     if (projectileImage) {
       const size = projectile.projectileSize || Math.max(16, projectile.radius * 4.5);
       ctx.save();
       ctx.translate(projectile.x, projectile.y);
-      ctx.rotate(projectile.rotation + (projectile.spriteRotation || 0));
+      ctx.rotate(projectile.rotation + (projectile.spriteRotation || 0) + (projectile.sparkleAngleOffset || 0));
       ctx.drawImage(projectileImage, -size * 0.5, -size * 0.5, size, size);
       ctx.restore();
       continue;
@@ -1674,6 +2571,34 @@ function renderProjectiles() {
     ctx.beginPath();
     ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
     ctx.fill();
+  }
+}
+
+function renderWardens() {
+  if (world.scene !== "running") {
+    return;
+  }
+
+  const image = world.weaponImages?.warden;
+  for (const warden of world.wardens) {
+    ctx.save();
+    ctx.translate(warden.x, warden.y);
+    ctx.rotate(warden.rotation);
+
+    if (image) {
+      const size = 30;
+      ctx.drawImage(image, -size * 0.5, -size * 0.5, size, size);
+    } else {
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(0, 0, warden.radius * 0.66, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#050505";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.restore();
   }
 }
 
@@ -1735,6 +2660,21 @@ function renderDrops() {
 function renderParticles() {
   for (const particle of world.particles) {
     const alpha = Math.max(0, particle.life / particle.maxLife);
+    if (particle.kind === "enemy-part" && world.enemyPartImages?.length) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(particle.x, particle.y);
+      ctx.rotate(particle.rotation || 0);
+      const imageRecord = getEnemyPartImageRecord(particle.partIndex);
+      const image = imageRecord?.image;
+      if (image) {
+        const size = particle.size || 24;
+        ctx.drawImage(image, -size * 0.5, -size * 0.5, size, size);
+      }
+      ctx.restore();
+      continue;
+    }
+
     if (particle.kind === "part" && world.partImages?.length) {
       ctx.save();
       ctx.globalAlpha = alpha;
@@ -1755,6 +2695,14 @@ function renderParticles() {
       ctx.fillStyle = particle.color;
       ctx.fillRect(-particle.size, -particle.size * 0.6, particle.size * 2, particle.size * 1.2);
       ctx.restore();
+      continue;
+    }
+
+    if (particle.kind === "smoke") {
+      ctx.fillStyle = `${particle.color}${toAlphaHex(alpha * 0.8)}`;
+      ctx.beginPath();
+      ctx.arc(particle.x, particle.y, particle.size * (0.65 + alpha * 0.55), 0, Math.PI * 2);
+      ctx.fill();
       continue;
     }
 
@@ -1903,7 +2851,9 @@ function resetGameplayState() {
   const maxHitPoints = world.currentShip ? getShipMaxHitPoints(world.currentShip) : 100;
   world.projectiles = [];
   world.beams = [];
+  world.wardens = [];
   world.enemies = [];
+  world.wrecks = [];
   world.particles = [];
   world.drops = [];
   world.bossEncounter = null;
@@ -1912,6 +2862,10 @@ function resetGameplayState() {
   world.stageHazardType = "mine";
   world.stageHazardsRemaining = 0;
   world.stageEnemyShipsRemaining = 0;
+  world.stageEnemyArchetype = null;
+  world.stageMidLargeArchetype = null;
+  world.stageMidLargeSpawned = false;
+  world.stageEnemySpawnCount = 0;
   world.nextBossScore = 1000;
   world.activeBossIndex = 0;
   world.defeatedBossCount = 0;
@@ -1924,6 +2878,7 @@ function resetGameplayState() {
   world.player.maxHitPoints = maxHitPoints;
   world.player.hitPoints = maxHitPoints;
   world.player.collisionCooldownUntil = 0;
+  world.playerWreckExited = false;
   world.playerScaleMultiplier = 0.8;
   world.player.x = world.width * 0.34;
   world.player.y = world.height * 0.5;
@@ -1947,6 +2902,7 @@ function startLaunchSequence() {
   world.transitionStartedAt = performance.now();
   introScreen.classList.add("is-hidden");
   menuButton.classList.remove("is-visible");
+  skipBossButton?.classList.remove("is-visible");
   scoreDisplay.classList.remove("is-visible");
 }
 
@@ -2040,7 +2996,7 @@ function startDeathSequence() {
   world.scene = "dying";
   world.deathStartedAt = performance.now();
   pointer.down = false;
-  triggerPlayerDeathEffects(world);
+  spawnPlayerDeathWreck();
 }
 
 function getDeathProgress() {
@@ -2053,13 +3009,7 @@ function getDeathProgress() {
 }
 
 function renderDeathFade() {
-  if (world.scene !== "dying") {
-    return;
-  }
-
-  const alpha = getDeathProgress();
-  ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
-  ctx.fillRect(0, 0, world.width, world.height);
+  // Death uses wreck drift sequence; no full-screen fade.
 }
 
 function returnToIntro() {
@@ -2069,6 +3019,7 @@ function returnToIntro() {
   keys.clear();
   introScreen.classList.remove("is-hidden");
   menuButton.classList.remove("is-visible");
+  skipBossButton?.classList.remove("is-visible");
   scoreDisplay.classList.remove("is-visible");
 }
 
@@ -2083,25 +3034,29 @@ function tick(now) {
   }
   updateStars(deltaSeconds);
   updateEnemies(deltaSeconds);
+  updateWardens(deltaSeconds);
   if (world.currentShip) {
     updateWeaponAim(world.currentShip);
   }
   updateProjectiles(deltaSeconds);
   updateBeams(deltaSeconds);
+  updateWrecks(deltaSeconds);
   updateParticles(deltaSeconds);
   updateDrops(deltaSeconds);
 
   renderBackground();
   renderBossPreview();
   renderEnemies();
+  renderWrecks();
   renderDrops();
 
-  if (world.currentShip && (world.scene === "running" || world.scene === "dying")) {
+  if (world.currentShip && world.scene === "running") {
     renderShip(world.currentShip);
   }
 
   renderLaunchSequence();
 
+  renderWardens();
   renderBeams();
   renderProjectiles();
   renderDebugHitboxes();
@@ -2115,10 +3070,18 @@ function tick(now) {
   if (world.scene === "launch" && getLaunchProgress() >= 1) {
     world.scene = "running";
     menuButton.classList.add("is-visible");
+    skipBossButton?.classList.add("is-visible");
     scoreDisplay.classList.add("is-visible");
   }
 
-  if (world.scene === "dying" && getDeathProgress() >= 1) {
+  if (
+    world.scene === "dying"
+    && (performance.now() - world.deathStartedAt) / 1000 >= 6.5
+    && !world.wrecks.some((wreck) => wreck.kind === "player")
+  ) {
+    returnToIntro();
+  }
+  if (world.scene === "dying" && world.playerWreckExited) {
     returnToIntro();
   }
 
@@ -2166,6 +3129,7 @@ function bindEvents() {
 
   launchButton.addEventListener("click", startLaunchSequence);
   menuButton.addEventListener("click", returnToIntro);
+  skipBossButton?.addEventListener("click", skipToBossEncounter);
   if (playtestHitboxesToggle) {
     playtestHitboxesToggle.addEventListener("change", () => {
       world.debugHitboxes = playtestHitboxesToggle.checked;
@@ -2185,8 +3149,10 @@ async function init() {
     sporeImage,
     enemySpawnerImage,
     partImages,
+    enemyPartImages,
     weaponImages,
     enemyShotImages,
+    projectileSpriteImages,
     soundPools,
   } = await loadGameAssets();
 
@@ -2196,8 +3162,11 @@ async function init() {
   world.sporeImage = sporeImage;
   world.enemySpawnerImage = enemySpawnerImage;
   world.partImages = partImages;
+  world.enemyPartImages = enemyPartImages;
+  world.enemyPartBlackImages = buildBlackEnemyPartImages(enemyPartImages);
   world.weaponImages = weaponImages;
   world.enemyShotImages = enemyShotImages;
+  world.projectileSpriteImages = projectileSpriteImages;
   world.soundPools = soundPools;
   world.debugHitboxes = Boolean(playtestHitboxesToggle?.checked);
 

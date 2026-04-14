@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="56" height="56" viewBox="0 0 56 56">
+  <defs>
+    <clipPath id="clip-photontorpedo">
+      <rect width="56" height="56"/>
+    </clipPath>
+  </defs>
+  <g id="photontorpedo" clip-path="url(#clip-photontorpedo)">
+    <path id="Polygon_13" data-name="Polygon 13" d="M37.5,0,32.312,17.307,50,21.5,32.312,25.692,37.5,43,25,29.885,12.5,43l5.188-17.308L0,21.5l17.687-4.193L12.5,0,25,13.115Z" transform="translate(3 7)"/>
+  </g>
+</svg>

@@ -256,6 +256,38 @@ body {
   background: #ffffff;
 }
 
+.skip-boss-button {
+  position: fixed;
+  top: 14px;
+  right: 88px;
+  z-index: 2;
+  padding: 0.35rem 0.65rem;
+  border: 1.5px solid #050505;
+  background: rgba(255, 255, 255, 0.88);
+  color: #050505;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease, background 160ms ease;
+}
+
+.skip-boss-button.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.skip-boss-button:hover,
+.skip-boss-button:focus-visible {
+  transform: translateY(-1px);
+  background: #ffffff;
+}
+
 .score-display {
   position: fixed;
   top: 14px;
@@ -292,6 +324,11 @@ body {
 
   .ship-card {
     min-width: 9rem;
+  }
+
+  .skip-boss-button {
+    right: 14px;
+    top: 50px;
   }
 }
 

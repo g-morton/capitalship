@@ -39,7 +39,7 @@ export const SHIP_FILES = [
       repairRate: 1.4,
     },
     defaultLightWeaponId: "pd",
-    path: "assets/images/ship-1-Rocinante.svg",
+    path: "assets/images/ship-1-rocinante.svg",
     width: 384,
     height: 134,
     hitCircles: [
@@ -69,7 +69,7 @@ export const SHIP_FILES = [
       repairRate: 1.8,
     },
     defaultLightWeaponId: "quadlaser",
-    path: "assets/images/ship-2-Gallimaufry.svg",
+    path: "assets/images/ship-2-gallimaufry.svg",
     width: 422,
     height: 112,
     hitCircles: [
@@ -124,19 +124,92 @@ export const SHIP_FILES = [
     ],
   },
   {
-    id: "ship-4-galactica",
-    label: "Galactica",
+    id: "ship-4-sulaco",
+    label: "Sulaco",
     scaleLevel: 4,
     displayScale: 1,
     stats: {
-      maxHitPoints: 300,
-      thrust: 250,
-      drag: 0.868,
-      repairRate: 2.7,
+      maxHitPoints: 330,
+      thrust: 286,
+      drag: 0.876,
+      repairRate: 1.8,
+    },
+    defaultLightWeaponId: "missile",
+    path: "assets/images/ship-4-Sulaco.svg",
+    width: 668,
+    height: 193,
+    hitCircles: [
+      { x: 30, y: 68, radius: 26 },
+      { x: 86, y: 68, radius: 31 },
+      { x: 154, y: 68, radius: 35 },
+      { x: 232, y: 68, radius: 37 },
+      { x: 318, y: 67, radius: 39 },
+      { x: 408, y: 68, radius: 38 },
+      { x: 498, y: 68, radius: 36 },
+      { x: 585, y: 76, radius: 32 },
+      { x: 180, y: 102, radius: 20 },
+      { x: 254, y: 104, radius: 17 },
+    ],
+    hardpoints: [
+      { type: "light", x: 332, y: 39 },
+      { type: "light", x: 300, y: 118 },
+      { type: "light", x: 222, y: 118 },
+      { type: "light", x: 239, y: 118 },
+      { type: "light", x: 256, y: 118 },
+      { type: "heavy", x: 367, y: 56 },
+      { type: "heavy", x: 529, y: 98 },
+      { type: "heavy", x: 289, y: 81 },
+    ],
+  },
+  {
+    id: "ship-5-enterprise-d",
+    label: "Enterprise-D",
+    scaleLevel: 5,
+    displayScale: 1,
+    stats: {
+      maxHitPoints: 260,
+      thrust: 236,
+      drag: 0.862,
+      repairRate: 3.6,
+    },
+    defaultLightWeaponId: "phaser",
+    path: "assets/images/ship-5-enterprise-d.svg",
+    width: 668,
+    height: 161,
+    hitCircles: [
+      { x: 38, y: 70, radius: 24 },
+      { x: 88, y: 71, radius: 30 },
+      { x: 152, y: 70, radius: 34 },
+      { x: 226, y: 69, radius: 38 },
+      { x: 306, y: 67, radius: 41 },
+      { x: 389, y: 65, radius: 40 },
+      { x: 471, y: 63, radius: 37 },
+      { x: 547, y: 62, radius: 33 },
+      { x: 613, y: 64, radius: 24 },
+      { x: 338, y: 29, radius: 22 },
+      { x: 244, y: 100, radius: 18 },
+    ],
+    hardpoints: [
+      { type: "light", x: 362, y: 31 },
+      { type: "light", x: 259, y: 142 },
+      { type: "light", x: 85, y: 128 },
+      { type: "heavy", x: 322, y: 96 },
+    ],
+  },
+  {
+    id: "ship-6-galactica",
+    label: "Galactica",
+    scaleLevel: 6,
+    displayScale: 1,
+    stats: {
+      maxHitPoints: 340,
+      thrust: 220,
+      drag: 0.856,
+      repairRate: 3.1,
     },
     defaultLightWeaponId: "flakcannon",
-    path: "assets/images/ship-4-Galactica.svg",
-    width: 723,
+    path: "assets/images/ship-6-galactica.svg",
+    width: 749,
     height: 106,
     hitCircles: [
       { x: 62, y: 9, radius: 36 },
@@ -161,18 +234,18 @@ export const SHIP_FILES = [
     ],
   },
   {
-    id: "ship-5-stardestroyer",
+    id: "ship-7-stardestroyer",
     label: "Star Destroyer",
-    scaleLevel: 5,
+    scaleLevel: 7,
     displayScale: 1,
     stats: {
-      maxHitPoints: 350,
-      thrust: 200,
-      drag: 0.85,
-      repairRate: 3.2,
+      maxHitPoints: 370,
+      thrust: 190,
+      drag: 0.848,
+      repairRate: 3.35,
     },
     defaultLightWeaponId: "heavyturbolaser",
-    path: "assets/images/ship-5-StarDestroyer.svg",
+    path: "assets/images/ship-7-StarDestroyer.svg",
     width: 836,
     height: 306,
     hitCircles: [
@@ -206,7 +279,7 @@ export const BOSS_FILES = [
   {
     id: "boss-karnyx",
     label: "Karnyx",
-    path: "assets/images/enemy-boss-Karnyx.svg",
+    path: "assets/images/enemy/enemy-boss-Karnyx.svg",
     defaultLightWeaponId: "snubcannon",
     sporeSpawnCount: 5,
     hitCircles: [
@@ -217,7 +290,7 @@ export const BOSS_FILES = [
   {
     id: "boss-myxolith",
     label: "Myxolith",
-    path: "assets/images/enemy-boss-Myxolith.svg",
+    path: "assets/images/enemy/enemy-boss-Myxolith.svg",
     defaultLightWeaponId: "snubcannon",
     sporeSpawnCount: 5,
     hitCircles: [
@@ -229,7 +302,7 @@ export const BOSS_FILES = [
   {
     id: "boss-oculyte",
     label: "Oculyte",
-    path: "assets/images/enemy-boss-Oculyte.svg",
+    path: "assets/images/enemy/enemy-boss-Oculyte.svg",
     defaultLightWeaponId: "snubcannon",
     sporeSpawnCount: 3,
     hitCircles: [
@@ -242,7 +315,7 @@ export const BOSS_FILES = [
   {
     id: "boss-umbryx",
     label: "Umbryx",
-    path: "assets/images/enemy-boss-Umbryx.svg",
+    path: "assets/images/enemy/enemy-boss-Umbryx.svg",
     defaultLightWeaponId: "snubcannon",
     sporeSpawnCount: 5,
     hitCircles: [
@@ -256,7 +329,7 @@ export const BOSS_FILES = [
   {
     id: "boss-virexon",
     label: "Virexon",
-    path: "assets/images/enemy-boss-Virexon.svg",
+    path: "assets/images/enemy/enemy-boss-Virexon.svg",
     defaultLightWeaponId: "snubcannon",
     sporeSpawnCount: 4,
     hitCircles: [
@@ -273,7 +346,7 @@ export const ENEMY_FILES = [
   {
     id: "enemy-orb-light",
     label: "Light Orb",
-    path: "assets/images/enemy-orb.svg",
+    path: "assets/images/enemy/enemy-orb.svg",
     width: 101,
     height: 94,
     defaultEnemyShotId: "enemy-shot-1",
@@ -285,7 +358,7 @@ export const ENEMY_FILES = [
   {
     id: "enemy-orb-heavy",
     label: "Heavy Orb",
-    path: "assets/images/enemy-orb.svg",
+    path: "assets/images/enemy/enemy-orb.svg",
     width: 101,
     height: 94,
     defaultEnemyShotId: "enemy-shot-2",
@@ -297,7 +370,7 @@ export const ENEMY_FILES = [
   {
     id: "enemy-dart",
     label: "Enemy Dart",
-    path: "assets/images/enemy-dart.svg",
+    path: "assets/images/enemy/enemy-dart.svg",
     width: 133,
     height: 79,
     defaultEnemyShotId: "enemy-shot-3",
@@ -308,15 +381,16 @@ export const ENEMY_FILES = [
   },
 ];
 
-export const MINE_FILE = "assets/images/mine.svg";
+export const MINE_FILE = "assets/images/enemy/mine.svg";
 export const CREW_FILE = "assets/images/crew.svg";
-export const SPORE_FILE = "assets/images/spore.svg";
+export const SPORE_FILE = "assets/images/enemy/spore.svg";
 export const PART_FILES = Array.from({ length: 10 }, (_, index) => `assets/images/part-${index + 1}.svg`);
 export const ENEMY_SHOT_FILES = {
-  "enemy-shot-1": "assets/images/enemy-shot-1.svg",
-  "enemy-shot-2": "assets/images/enemy-shot-2.svg",
-  "enemy-shot-3": "assets/images/enemy-shot-3.svg",
+  "enemy-shot-1": "assets/images/enemy/enemy-shot-1.svg",
+  "enemy-shot-2": "assets/images/enemy/enemy-shot-2.svg",
+  "enemy-shot-3": "assets/images/enemy/enemy-shot-3.svg",
 };
+export const ENEMY_PART_FILES = Array.from({ length: 40 }, (_, index) => `assets/images/enemy/enemy-part-${index + 1}.svg`);
 
 export const HIT_SMALL_SOUNDS = [
   "assets/sounds/hit-small-1.wav",
@@ -345,6 +419,15 @@ export const ENEMY_EXPLODE_SOUNDS = [
   "assets/sounds/explode-10.wav",
   "assets/sounds/explode-11.wav",
 ];
+
+const LIMITED_TRACKING_PROFILE = {
+  homingDelay: 0.2,
+  homingTurnRate: 1.15,
+  homingRange: 520,
+  homingPathRadius: 160,
+  homingForwardOnly: true,
+  homingAcquireAngle: 0.5,
+};
 
 export const WEAPON_DEFS = {
   pd: {
@@ -445,6 +528,7 @@ export const WEAPON_DEFS = {
     fireMode: "lobbed-torpedo",
     rocketTrail: true,
     gravity: 240,
+    ...LIMITED_TRACKING_PROFILE,
   },
   missile: {
     id: "missile",
@@ -465,6 +549,7 @@ export const WEAPON_DEFS = {
     aimMode: "mouse",
     fireMode: "projectile",
     rocketTrail: true,
+    ...LIMITED_TRACKING_PROFILE,
   },
   flakcannon: {
     id: "flakcannon",
@@ -486,6 +571,43 @@ export const WEAPON_DEFS = {
     fireMode: "spread-projectile",
     spreadCount: 3,
     spreadAngle: 0.16,
+  },
+  phaser: {
+    id: "phaser",
+    label: "Phaser",
+    path: "assets/images/weapon-small-phaser.svg",
+    soundPath: "assets/sounds/weapon-small-phaser.wav",
+    mountType: "light",
+    damage: 0,
+    turretSize: 30,
+    cooldown: 2500,
+    burstCount: 1,
+    burstSpacing: 0,
+    burstPause: 0,
+    aimMode: "mouse",
+    fireMode: "beam",
+    beamDuration: 2.5,
+    beamWidth: 3,
+    beamColor: "rgba(255, 255, 255, 0.95)",
+    beamDamagePerSecond: 34,
+    sustainDurationMs: 2500,
+    sustainCooldownMs: 3000,
+    bankDamageBonusPerExtra: 0.75,
+  },
+  warden: {
+    id: "warden",
+    label: "Warden",
+    path: "assets/images/weapon-small-warden.svg",
+    soundPath: "assets/sounds/weapon-small-warden.wav",
+    mountType: "light",
+    damage: 0,
+    turretSize: 30,
+    cooldown: 4600,
+    burstCount: 1,
+    burstSpacing: 0,
+    burstPause: 0,
+    aimMode: "mouse",
+    fireMode: "warden-drone",
   },
   "large-cannon": {
     id: "large-cannon",
@@ -586,9 +708,31 @@ export const WEAPON_DEFS = {
     spreadAngle: 0.18,
     rocketTrail: true,
     explosiveRadius: 42,
-    homingDelay: 0.18,
-    homingTurnRate: 4.4,
-    homingRange: 800,
+    ...LIMITED_TRACKING_PROFILE,
+  },
+  "large-phototorpedo": {
+    id: "large-phototorpedo",
+    label: "Photo Torpedo",
+    path: "assets/images/weapon-large-photontorpedo.svg",
+    soundPath: "assets/sounds/weapon-large-photontorpedo.wav",
+    mountType: "heavy",
+    damage: 340,
+    projectileSpeed: 220,
+    projectileLife: 4.2,
+    projectileRadius: 8,
+    projectileColor: "#f4f4f4",
+    turretSize: 35,
+    cooldown: 4600,
+    burstCount: 1,
+    burstSpacing: 0,
+    burstPause: 0,
+    aimMode: "mouse",
+    fireMode: "projectile",
+    explosiveRadius: 92,
+    projectileSpriteId: "photontorpedo",
+    projectileSpritePath: "assets/images/photontorpedo.svg",
+    projectileSize: 42,
+    ...LIMITED_TRACKING_PROFILE,
   },
 };
 

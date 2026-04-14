@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30" height="30" viewBox="0 0 30 30">
+  <defs>
+    <clipPath id="clip-enemy-emitter">
+      <rect width="30" height="30"/>
+    </clipPath>
+  </defs>
+  <g id="enemy-emitter" clip-path="url(#clip-enemy-emitter)">
+    <g id="Ellipse_39" data-name="Ellipse 39" transform="translate(9 9)" fill="#fff" stroke="#000" stroke-width="3">
+      <circle cx="6" cy="6" r="6" stroke="none"/>
+      <circle cx="6" cy="6" r="7.5" fill="none"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="72" height="72" viewBox="0 0 72 72">
+  <defs>
+    <clipPath id="clip-weapon-large-photontorpedo">
+      <rect width="72" height="72"/>
+    </clipPath>
+  </defs>
+  <g id="weapon-large-photontorpedo" clip-path="url(#clip-weapon-large-photontorpedo)">
+    <path id="Union_75" data-name="Union 75" d="M-547.749,564.353a52.073,52.073,0,0,1-8.374-2.324c-6.369-2.412-9.878-5.619-9.878-9.03s3.508-6.618,9.878-9.029a52.087,52.087,0,0,1,8.374-2.324A15.951,15.951,0,0,1-536.475,537a15.929,15.929,0,0,1,9.874,3.409,78.375,78.375,0,0,1,8.264.959v3.693c8.916,1.059,15.386,4.213,15.386,7.938s-6.47,6.88-15.386,7.938v3.694a78.248,78.248,0,0,1-8.264.96A15.931,15.931,0,0,1-536.475,569,15.951,15.951,0,0,1-547.749,564.353Z" transform="translate(572.475 -517)" stroke="#fff" stroke-width="2"/>
+  </g>
+</svg>

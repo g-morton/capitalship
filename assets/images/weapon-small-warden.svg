@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="56" height="56" viewBox="0 0 56 56">
+  <defs>
+    <clipPath id="clip-weapon-small-warden">
+      <rect width="56" height="56"/>
+    </clipPath>
+  </defs>
+  <g id="weapon-small-warden" clip-path="url(#clip-weapon-small-warden)">
+    <path id="Union_78" data-name="Union 78" d="M-634.5,620l2.569-4.623A15.017,15.017,0,0,1-644.461,604.5H-648v-8h3.539a15.011,15.011,0,0,1,12.529-10.877L-634.5,581h10l-2.651,4.77a15.021,15.021,0,0,1,11.612,10.73H-612v8h-3.54a15.024,15.024,0,0,1-11.611,10.729l2.65,4.77Z" transform="translate(658.001 -572)" stroke="#fff" stroke-width="2"/>
+  </g>
+</svg>

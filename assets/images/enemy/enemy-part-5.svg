@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="163" height="126" viewBox="0 0 163 126">
+  <defs>
+    <clipPath id="clip-enemy-part-5">
+      <rect width="163" height="126"/>
+    </clipPath>
+  </defs>
+  <g id="enemy-part-5" clip-path="url(#clip-enemy-part-5)">
+    <g id="Group_53" data-name="Group 53" transform="translate(-152.402 -144)">
+      <path id="Path_379" data-name="Path 379" d="M201.724,222.558c-14.74-2.8-25.724,32.158-26.571,42.322,53.031,6.151,20.586-56.335-14.657-42.322" transform="translate(-1.731 -26.321)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5" stroke-width="8" fill-rule="evenodd"/>
+      <path id="Path_380" data-name="Path 380" d="M272.285,222.017c.852,5.109,1.909,5.706,2.776,8.018,6.932,18.487,27.289,31.84,33.184,30.7,12.909,1.721,13.469-7.036,10.607-11.489" transform="translate(-22.772 -5.354)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5" stroke-width="8" fill-rule="evenodd"/>
+      <path id="Path_390" data-name="Path 390" d="M234.357,225.409c-13.385,1.673-44.741,30.388-62.9,39.47-4.169,2.085-8.708,1-12.642,4.934" transform="translate(-1.731 -26.321)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5" stroke-width="4" fill-rule="evenodd"/>
+      <path id="Path_391" data-name="Path 391" d="M251.009,227.259c.961,1.443,9.081,27.1,29.294,31.144,15.447,3.09,15.5,2.019,31.144,4.626" transform="translate(-22.772 -5.354)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5" stroke-width="4" fill-rule="evenodd"/>
+      <path id="Path_397" data-name="Path 397" d="M218.324,217.327c27.416,27.416,54.911,53.553,56.428,52.794.963-.481,25.9-46.975,18-61.175" transform="translate(-22.772 -5.354)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5" stroke-width="2" fill-rule="evenodd"/>
+      <path id="Path_398" data-name="Path 398" d="M256.559,234.66c-1.269.846-9.141,23.483,18.552,16.027,18.4-4.954,19.9-26.628,18.934-29.541" transform="translate(-22.772 -5.354)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5" stroke-width="2" fill-rule="evenodd"/>
+      <path id="Path_399" data-name="Path 399" d="M199.821,236.51c45.355,35.717,61.278,34.883,81.969,26.21,2.643-1.107,20.529-8.6,34.979,2.776" transform="translate(-4.969 -26.321)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5" stroke-width="2" fill-rule="evenodd"/>
+    </g>
+    <g id="enemy-orb" transform="translate(47.3 -51.402)">
+      <g id="Subtraction_32" transform="translate(-640.451 -1064.406) rotate(-73)">
+        <path id="Path_422" data-name="Path 422" d="M-757.25,984.443a53.86,53.86,0,0,1-11.845-1.22,33.45,33.45,0,0,1-8.9-3.3c-1.645-.238-3.285-.518-4.872-.833a71.168,71.168,0,0,1-17.377-5.616,35.478,35.478,0,0,1-12.172-9.134A19.446,19.446,0,0,1-817,951.865a25.857,25.857,0,0,1,4.586-13.994c2.086-3.2,27.731-18.478,25.785-20.035A64.058,64.058,0,0,1-762.663,913a94.324,94.324,0,0,1,39.323,8.191,41.117,41.117,0,0,1,13.369,9.592,19.083,19.083,0,0,1,5.131,12.682,23.291,23.291,0,0,1-5.131,13.787,49.254,49.254,0,0,1-11.822,11c-1.063,4.133-4.129,7.867-8.658,10.54a35.451,35.451,0,0,1-8.97,3.538,70.8,70.8,0,0,1-12.771,1.934C-753.915,984.382-755.619,984.443-757.25,984.443Z" transform="translate(-165 40)"/>
+      </g>
+      <g id="Path_413" transform="translate(65.92 101.148)">
+        <path id="Path_423" data-name="Path 423" d="M10.5,0c5.457-.559,9.981,5.622,9.981,10.592S16.3,18,10.5,18-.514,14.022-.514,9.051,5.043.559,10.5,0Z"/>
+      </g>
+      <path id="Path_426" data-name="Path 426" d="M40.392,93.08c1.154,1.538,7.021,4.04,9.1,5.656,9.866,7.674,19.452,1.569,21.149,1.229,8.145-1.629,8.694-6.112,9.468-6.885" transform="translate(-64.352 53)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5" stroke-width="8" fill-rule="evenodd"/>
+    </g>
+  </g>
+</svg>
