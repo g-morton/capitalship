@@ -39,7 +39,7 @@ export const SHIP_FILES = [
       repairRate: 1.4,
     },
     defaultLightWeaponId: "pd",
-    path: "assets/images/ship-1-rocinante.svg",
+    path: "assets/images/ship-1-Rocinante.svg",
     width: 384,
     height: 134,
     hitCircles: [
@@ -69,7 +69,7 @@ export const SHIP_FILES = [
       repairRate: 1.8,
     },
     defaultLightWeaponId: "quadlaser",
-    path: "assets/images/ship-2-gallimaufry.svg",
+    path: "assets/images/ship-2-Gallimaufry.svg",
     width: 422,
     height: 112,
     hitCircles: [
